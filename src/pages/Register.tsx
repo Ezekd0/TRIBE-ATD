@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Fingerprint, CheckCircle2 } from 'lucide-react';
+import { api } from '../services/api';
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -17,6 +18,8 @@ const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
@@ -27,12 +30,16 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     
-    // Simulate API call to register user as PENDING
-    setTimeout(() => {
+    try {
+      await api.post('/auth/register', formData);
       setIsSubmitted(true);
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
   if (isSubmitted) {
@@ -68,6 +75,11 @@ const Register: React.FC = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5 bg-[#111] p-8 rounded-3xl border border-white/5 shadow-2xl">
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
         <div className="grid md:grid-cols-2 gap-5">
           <div>
             <label className="block text-sm font-bold mb-2 text-white/80">Full Name *</label>

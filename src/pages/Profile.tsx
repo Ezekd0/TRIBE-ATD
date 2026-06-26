@@ -6,9 +6,8 @@ const Profile: React.FC = () => {
   
   const [formData, setFormData] = useState({
     fullName: user?.full_name || '',
-    phone: user?.phone || '',
-    occupation: user?.occupation || '',
-    institution: user?.institution || ''
+    email: user?.email || '',
+    phone: user?.phone_number || ''
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,8 +23,8 @@ const Profile: React.FC = () => {
         
         <div className="flex items-center space-x-6 mb-8">
           <div className="w-20 h-20 rounded-full bg-border overflow-hidden flex items-center justify-center text-2xl font-bold">
-            {user?.photo_url ? (
-              <img src={user.photo_url} alt="Profile" className="w-full h-full object-cover" />
+            {user?.profile_image_url ? (
+              <img src={user.profile_image_url} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               user?.full_name.charAt(0)
             )}
@@ -69,29 +68,6 @@ const Profile: React.FC = () => {
                 name="phone"
                 className="w-full bg-background border border-border rounded-md px-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
                 value={formData.phone}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Occupation</label>
-              <input
-                type="text"
-                name="occupation"
-                className="w-full bg-background border border-border rounded-md px-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
-                value={formData.occupation}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Institution</label>
-              <input
-                type="text"
-                name="institution"
-                className="w-full bg-background border border-border rounded-md px-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
-                value={formData.institution}
                 onChange={handleChange}
               />
             </div>

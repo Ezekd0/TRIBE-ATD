@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, MoreVertical, ShieldAlert, UserX, UserCheck, Trash2, Eye, History, Shield, CheckCircle, Download, KeyRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
+import { api } from '../services/api';
 
 type MemberStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED';
 
@@ -25,12 +26,34 @@ const Members: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTab, setFilterTab] = useState<'ALL' | 'PENDING' | 'ACTIVE' | 'SUSPENDED'>('ALL');
   
-  const [members, setMembers] = useState<Member[]>([
-    { id: '1', name: 'Sarah Connor', email: 'sarah@example.com', joinDate: '2026-01-15', status: 'ACTIVE', tribeNumber: 'TRB-2026-0042', blockchainHash: '0x8f7c...3a1b', address: '123 Tech Ave', emergencyName: 'John Connor', emergencyPhone: '+1 555 1234', role: 'member' },
-    { id: '2', name: 'Michael Ross', email: 'mike@example.com', joinDate: '2026-04-05', status: 'PENDING', address: '456 Legal St', emergencyName: 'Harvey Specter', emergencyPhone: '+1 555 9876', role: 'member' },
-    { id: '3', name: 'Emily Chen', email: 'emily@example.com', joinDate: '2026-03-22', status: 'SUSPENDED', tribeNumber: 'TRB-2026-0089', address: '789 Silicon Blvd', emergencyName: 'David Chen', emergencyPhone: '+1 555 4567', role: 'member' },
-    { id: '4', name: 'Admin User', email: 'admin@tribe.com', joinDate: '2026-01-01', status: 'ACTIVE', tribeNumber: 'TRB-ADMIN-01', blockchainHash: '0x9a2b...4c5d', address: 'Classified', emergencyName: 'Classified', emergencyPhone: 'Classified', role: 'admin' },
-  ]);
+  const [members, setMembers] = useState<Member[]>([]);
+
+  const fetchUsers = async () => {
+    try {
+      const data = await api.get('/admin/users');
+      // Format backend users to frontend members model if needed
+      const formatted = data.map((u: any) => ({
+        id: u.id,
+        name: u.full_name,
+        email: u.email,
+        joinDate: u.created_at,
+        status: u.status,
+        tribeNumber: u.tribe_number,
+        blockchainHash: u.blockchain_hash,
+        address: u.address,
+        emergencyName: u.emergency_contact_name,
+        emergencyPhone: u.emergency_contact_phone,
+        role: u.role
+      }));
+      setMembers(formatted);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<{ type: 'APPROVE' | 'SUSPEND' | 'REACTIVATE' | 'DELETE' | 'PROMOTE' | 'RESET_PASSWORD', member: Member } | null>(null);
@@ -51,35 +74,31 @@ const Members: React.FC = () => {
     setActiveDropdown(null);
   };
 
-  const confirmAction = () => {
+  const confirmAction = async () => {
     if (!showConfirmModal) return;
     const { type, member } = showConfirmModal;
 
-    if (type === 'DELETE') {
-      setMembers(members.filter(m => m.id !== member.id));
-    } else if (type === 'APPROVE') {
-      setMembers(members.map(m => 
-        m.id === member.id 
-          ? { 
-              ...m, 
-              status: 'ACTIVE', 
-              tribeNumber: `TRB-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-              blockchainHash: `0x${Math.random().toString(16).substr(2, 8)}...${Math.random().toString(16).substr(2, 4)}`
-            } 
-          : m
-      ));
-    } else if (type === 'PROMOTE') {
-       setMembers(members.map(m => m.id === member.id ? { ...m, role: 'admin' } : m));
-    } else if (type === 'RESET_PASSWORD') {
-      // Just simulate sending a password reset email
-      // No state change required
-      alert(`Password reset link sent to ${member.email}`);
-    } else {
-      setMembers(members.map(m => 
-        m.id === member.id 
-          ? { ...m, status: type === 'SUSPEND' ? 'SUSPENDED' : 'ACTIVE' } 
-          : m
-      ));
+    try {
+      if (type === 'DELETE') {
+        await api.delete(`/admin/users/${member.id}`);
+        setMembers(members.filter(m => m.id !== member.id));
+      } else if (type === 'RESET_PASSWORD') {
+        alert(`Password reset link sent to ${member.email}`);
+      } else {
+        let newStatus = member.status;
+        let newRole = member.role;
+        if (type === 'APPROVE') newStatus = 'ACTIVE';
+        if (type === 'SUSPEND') newStatus = 'SUSPENDED';
+        if (type === 'REACTIVATE') newStatus = 'ACTIVE';
+        if (type === 'PROMOTE') newRole = 'admin';
+
+        await api.put(`/admin/users/${member.id}`, { status: newStatus, role: newRole });
+        // Instead of doing complex frontend transforms, just refetch
+        fetchUsers();
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Action failed');
     }
     setShowConfirmModal(null);
   };

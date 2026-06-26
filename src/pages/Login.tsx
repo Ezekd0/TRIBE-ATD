@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { api } from '../services/api';
 import { Fingerprint, AlertCircle } from 'lucide-react';
 
 interface LoginProps {
@@ -21,43 +22,30 @@ const Login: React.FC<LoginProps> = ({ isAdminLogin = false }) => {
     setLoading(true);
     setError(null);
     
-    // Simulate API call and Supabase logic
-    setTimeout(() => {
-      // Mock logic for pending user
-      if (email.includes('pending')) {
-        setError('Your account is still PENDING admin approval. Please wait for an administrator to review your application.');
-        setLoading(false);
-        return;
-      }
-
+    try {
+      const { token, user } = await api.post('/auth/login', { email, password });
+      
       if (isAdminLogin) {
-        if (email.includes('super')) {
-          signIn('super_admin');
-          navigate('/admin');
-          setLoading(false);
-          return;
-        } else if (!email.includes('admin')) {
+        if (user.role === 'member') {
           setError('Unauthorized: You do not have administrator privileges.');
           setLoading(false);
           return;
         }
-        signIn('admin');
+        signIn(token, user);
         navigate('/admin');
       } else {
-        // If they are an admin but log into regular, they just get member access for now or redirect
-        if (email.includes('super')) {
-          signIn('super_admin');
-          navigate('/admin');
-        } else if (email.includes('admin')) {
-          signIn('admin');
+        signIn(token, user);
+        if (user.role === 'admin' || user.role === 'super_admin') {
           navigate('/admin');
         } else {
-          signIn('member');
           navigate('/member');
         }
       }
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (

@@ -35,8 +35,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onOpenSidebar }) => {
               <span className="text-xs text-secondary capitalize">{user.role}</span>
             </div>
             <div className="h-8 w-8 rounded-full bg-border flex items-center justify-center text-primary font-bold overflow-hidden">
-              {user.photo_url ? (
-                <img src={user.photo_url} alt="Profile" className="h-full w-full object-cover" />
+              {user.profile_image_url ? (
+                <img src={user.profile_image_url} alt="Profile" className="h-full w-full object-cover" />
               ) : (
                 user.full_name.charAt(0)
               )}
