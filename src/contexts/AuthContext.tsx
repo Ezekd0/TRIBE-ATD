@@ -22,7 +22,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (token && storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        if (!parsedUser.full_name) {
+          throw new Error('Malformed user data');
+        }
+        setUser(parsedUser);
       } catch (e) {
         console.error(e);
         localStorage.removeItem('token');

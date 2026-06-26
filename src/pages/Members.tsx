@@ -271,35 +271,42 @@ const Members: React.FC = () => {
                                </button>
                             )}
 
-                            <div className="h-px bg-white/10 my-1 w-full" />
-                            
-                            {member.status === 'ACTIVE' && (
-                              <button onClick={() => handleAction('SUSPEND', member)} className="w-full text-left px-4 py-2.5 text-sm text-yellow-400 hover:bg-yellow-400/10 rounded-xl flex items-center transition-colors">
-                                <ShieldAlert className="w-4 h-4 mr-3" /> Suspend User
-                              </button>
-                            )}
+                            {/* Standard admins cannot modify other admins/super_admins */}
+                            {(currentUserRole === 'super_admin' || (member.role !== 'admin' && member.role !== 'super_admin')) && (
+                              <>
+                                <div className="h-px bg-white/10 my-1 w-full" />
+                                
+                                {member.status === 'ACTIVE' && member.role !== 'super_admin' && (
+                                  <button onClick={() => handleAction('SUSPEND', member)} className="w-full text-left px-4 py-2.5 text-sm text-yellow-400 hover:bg-yellow-400/10 rounded-xl flex items-center transition-colors">
+                                    <ShieldAlert className="w-4 h-4 mr-3" /> Suspend User
+                                  </button>
+                                )}
 
-                            {member.status !== 'PENDING' && (
-                              <button onClick={() => handleAction('RESET_PASSWORD', member)} className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-white/10 rounded-xl flex items-center transition-colors">
-                                <KeyRound className="w-4 h-4 mr-3 text-secondary" /> Reset Password
-                              </button>
-                            )}
-                            
-                            {member.status === 'SUSPENDED' && (
-                              <button onClick={() => handleAction('REACTIVATE', member)} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-green-400/10 rounded-xl flex items-center transition-colors">
-                                <UserCheck className="w-4 h-4 mr-3" /> Reactivate User
-                              </button>
-                            )}
+                                {member.status !== 'PENDING' && (
+                                  <button onClick={() => handleAction('RESET_PASSWORD', member)} className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-white/10 rounded-xl flex items-center transition-colors">
+                                    <KeyRound className="w-4 h-4 mr-3 text-secondary" /> Reset Password
+                                  </button>
+                                )}
+                                
+                                {member.status === 'SUSPENDED' && (
+                                  <button onClick={() => handleAction('REACTIVATE', member)} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-green-400/10 rounded-xl flex items-center transition-colors">
+                                    <UserCheck className="w-4 h-4 mr-3" /> Reactivate User
+                                  </button>
+                                )}
 
-                            {currentUserRole === 'super_admin' && member.role === 'member' && member.status === 'ACTIVE' && (
-                               <button onClick={() => handleAction('PROMOTE', member)} className="w-full text-left px-4 py-2.5 text-sm text-blue-400 hover:bg-blue-400/10 rounded-xl flex items-center transition-colors">
-                                 <Shield className="w-4 h-4 mr-3" /> Grant Admin Rights
-                               </button>
-                            )}
+                                {currentUserRole === 'super_admin' && member.role === 'member' && member.status === 'ACTIVE' && (
+                                  <button onClick={() => handleAction('PROMOTE', member)} className="w-full text-left px-4 py-2.5 text-sm text-blue-400 hover:bg-blue-400/10 rounded-xl flex items-center transition-colors">
+                                    <Shield className="w-4 h-4 mr-3" /> Grant Admin Rights
+                                  </button>
+                                )}
 
-                            <button onClick={() => handleAction('DELETE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
-                              <Trash2 className="w-4 h-4 mr-3" /> Permanently Delete
-                            </button>
+                                {member.role !== 'super_admin' && (
+                                  <button onClick={() => handleAction('DELETE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
+                                    <Trash2 className="w-4 h-4 mr-3" /> Permanently Delete
+                                  </button>
+                                )}
+                              </>
+                            )}
                           </div>
                         </motion.div>
                       )}

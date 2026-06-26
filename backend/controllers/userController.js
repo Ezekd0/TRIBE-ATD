@@ -23,7 +23,25 @@ exports.getAllUsers = async (req, res) => {
         createdAt: true,
       },
     });
-    res.json(users);
+    
+    const mappedUsers = users.map(user => ({
+      id: user.id,
+      full_name: user.fullName,
+      email: user.email,
+      phone_number: user.phone,
+      gender: user.gender,
+      address: user.address,
+      postal_code: user.postalCode,
+      emergency_contact_name: user.emergencyName,
+      emergency_contact_phone: user.emergencyPhone,
+      role: user.role,
+      status: user.status,
+      tribe_number: user.tribeNumber,
+      on_chain_tx_hash: user.blockchainHash,
+      created_at: user.createdAt,
+    }));
+    
+    res.json(mappedUsers);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error retrieving users.' });
@@ -37,6 +55,11 @@ exports.updateStatus = async (req, res) => {
     
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Authorization check
+    if (req.user.role === 'admin' && (user.role === 'admin' || user.role === 'super_admin')) {
+      return res.status(403).json({ error: 'Standard admins cannot modify other administrators.' });
+    }
 
     let updateData = {};
 
@@ -89,6 +112,14 @@ exports.promoteRole = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Authorization check
+    if (req.user.role === 'admin' && (user.role === 'admin' || user.role === 'super_admin')) {
+      return res.status(403).json({ error: 'Standard admins cannot delete other administrators.' });
+    }
+
     await prisma.user.delete({ where: { id } });
     res.json({ message: 'User permanently deleted.' });
   } catch (err) {
@@ -100,6 +131,13 @@ exports.deleteUser = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Authorization check
+    if (req.user.role === 'admin' && (user.role === 'admin' || user.role === 'super_admin')) {
+      return res.status(403).json({ error: 'Standard admins cannot reset passwords for other administrators.' });
+    }
     // Mocking a password reset
     // In production, this would generate a token and send an email
     res.json({ message: 'Password reset link sent to user email successfully.' });

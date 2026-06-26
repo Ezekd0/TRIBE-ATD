@@ -24,8 +24,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ requiredRole }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user.role !== requiredRole) {
-    return <Navigate to={user.role === 'admin' ? '/admin' : '/member'} replace />;
+  if (requiredRole === 'admin' && user.role !== 'admin' && user.role !== 'super_admin') {
+    return <Navigate to="/member" replace />;
+  }
+  if (requiredRole === 'member' && (user.role === 'admin' || user.role === 'super_admin')) {
+    return <Navigate to="/admin" replace />;
   }
 
   return (

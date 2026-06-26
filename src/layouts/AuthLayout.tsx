@@ -14,7 +14,7 @@ const AuthLayout: React.FC = () => {
   }
 
   if (user) {
-    return <Navigate to={user.role === 'admin' ? '/admin' : '/member'} replace />;
+    return <Navigate to={user.role === 'admin' || user.role === 'super_admin' ? '/admin' : '/member'} replace />;
   }
 
   return (

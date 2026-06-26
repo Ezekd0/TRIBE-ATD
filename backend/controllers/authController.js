@@ -82,10 +82,23 @@ exports.login = async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    // Don't send password hash back
-    const { passwordHash, ...userWithoutPassword } = user;
+    const userForFrontend = {
+      id: user.id,
+      full_name: user.fullName,
+      email: user.email,
+      phone_number: user.phone,
+      gender: user.gender,
+      address: user.address,
+      emergency_contact_name: user.emergencyName,
+      emergency_contact_phone: user.emergencyPhone,
+      tribe_number: user.tribeNumber,
+      status: user.status,
+      role: user.role,
+      created_at: user.createdAt,
+      updated_at: user.updatedAt,
+    };
 
-    res.json({ token, user: userWithoutPassword });
+    res.json({ token, user: userForFrontend });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error during login.' });
