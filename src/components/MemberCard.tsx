@@ -1,6 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Fingerprint, Phone, Calendar, ShieldCheck, CheckCircle, Clock, Lock, Shield, UserRound, Link as LinkIcon, ShieldAlert } from 'lucide-react';
+import { Fingerprint, Phone, Calendar, ShieldCheck, CheckCircle, Lock, Shield, UserRound, Link as LinkIcon, ShieldAlert } from 'lucide-react';
 import type { User } from '../types';
 
 interface MemberCardProps {

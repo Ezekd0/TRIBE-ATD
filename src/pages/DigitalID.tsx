@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Download, Share2, CreditCard, Repeat, Shield } from 'lucide-react';
+import { Download, CreditCard, Repeat, Shield } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import MemberCard from '../components/MemberCard';
 import { toPng } from 'html-to-image';

@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid 
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldAlert, Users, UserCheck, UserX, UserMinus } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 import { useRealTime } from '../contexts/RealTimeContext';
 
 const AdminDashboard: React.FC = () => {

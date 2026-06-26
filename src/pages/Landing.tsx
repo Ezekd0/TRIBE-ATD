@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, QrCode, UserCheck, ChevronRight, Fingerprint, Activity } from 'lucide-react';
+import { Shield, ChevronRight, Fingerprint, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Landing: React.FC = () => {
