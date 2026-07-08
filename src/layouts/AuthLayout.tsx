@@ -21,7 +21,7 @@ const AuthLayout: React.FC = () => {
     <div className="min-h-screen bg-background flex">
       {/* Left side - Form */}
       <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 border-r border-border">
-        <div className="mx-auto w-full max-w-sm lg:w-96">
+        <div className="mx-auto w-full max-w-md lg:w-[480px]">
           <Outlet />
         </div>
       </div>

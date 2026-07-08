@@ -120,7 +120,7 @@ const Register: React.FC = () => {
         <p className="text-secondary">Join the Cave Tribe exclusive network</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5 bg-[#111] p-8 rounded-3xl border border-white/5 shadow-2xl">
+      <form onSubmit={handleSubmit} className="space-y-5 bg-[#111] p-5 sm:p-8 rounded-3xl border border-white/5 shadow-2xl">
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm">
             {error}
@@ -133,7 +133,7 @@ const Register: React.FC = () => {
               type="text"
               name="fullName"
               required
-              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
+              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
               placeholder="John Doe"
               value={formData.fullName}
               onChange={handleChange}
@@ -145,7 +145,7 @@ const Register: React.FC = () => {
               type="email"
               name="email"
               required
-              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
+              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
               placeholder="you@example.com"
               value={formData.email}
               onChange={handleChange}
@@ -160,7 +160,7 @@ const Register: React.FC = () => {
               type="tel"
               name="phone"
               required
-              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
+              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
               placeholder="+1 234 567 890"
               value={formData.phone}
               onChange={handleChange}
@@ -171,7 +171,7 @@ const Register: React.FC = () => {
             <select
               name="gender"
               required
-              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all appearance-none"
+              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all appearance-none"
               value={formData.gender}
               onChange={handleChange}
             >
@@ -189,7 +189,7 @@ const Register: React.FC = () => {
               type="text"
               name="address"
               required
-              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
+              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
               placeholder="123 Tribe Avenue, City"
               value={formData.address}
               onChange={handleChange}
@@ -201,7 +201,7 @@ const Register: React.FC = () => {
               type="text"
               name="postalCode"
               required
-              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
+              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
               placeholder="100001"
               value={(formData as any).postalCode || ''}
               onChange={handleChange}
@@ -218,7 +218,7 @@ const Register: React.FC = () => {
                 type="text"
                 name="emergencyName"
                 required
-                className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
+                className="w-full bg-black border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
                 placeholder="Jane Doe"
                 value={formData.emergencyName}
                 onChange={handleChange}
@@ -230,7 +230,7 @@ const Register: React.FC = () => {
                 type="tel"
                 name="emergencyPhone"
                 required
-                className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
+                className="w-full bg-black border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
                 placeholder="+1 987 654 321"
                 value={formData.emergencyPhone}
                 onChange={handleChange}
@@ -245,7 +245,7 @@ const Register: React.FC = () => {
             type="password"
             name="password"
             required
-            className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
+            className="w-full bg-black border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
             placeholder="••••••••"
             value={formData.password}
             onChange={handleChange}

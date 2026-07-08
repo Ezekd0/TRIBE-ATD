@@ -75,7 +75,7 @@ const Login: React.FC<LoginProps> = ({ isAdminLogin = false }) => {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 bg-[#111] p-8 rounded-3xl border border-white/5 shadow-2xl">
+      <form onSubmit={handleSubmit} className="space-y-6 bg-[#111] p-5 sm:p-8 rounded-3xl border border-white/5 shadow-2xl">
         
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-start text-sm">
@@ -89,7 +89,7 @@ const Login: React.FC<LoginProps> = ({ isAdminLogin = false }) => {
           <input
             type="email"
             required
-            className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
+            className="w-full bg-black border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -101,7 +101,7 @@ const Login: React.FC<LoginProps> = ({ isAdminLogin = false }) => {
           <input
             type="password"
             required
-            className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
+            className="w-full bg-black border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all placeholder-white/20"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
