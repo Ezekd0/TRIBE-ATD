@@ -57,9 +57,9 @@ const MemberDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">Welcome back, {user?.full_name.split(' ')[0]}</h1>
-        <div className="text-sm text-secondary">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+        <div className="text-sm text-secondary self-start sm:self-auto">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">

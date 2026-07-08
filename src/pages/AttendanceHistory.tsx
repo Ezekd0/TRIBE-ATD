@@ -71,7 +71,8 @@ const AttendanceHistory: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      {/* Desktop view */}
+      <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-border/50 text-secondary font-medium">
@@ -117,6 +118,49 @@ const AttendanceHistory: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card list view */}
+      <div className="block md:hidden space-y-4">
+        {loading ? (
+          <div className="p-8 text-center text-secondary bg-card border border-border rounded-xl">
+            Loading records...
+          </div>
+        ) : records.length === 0 ? (
+          <div className="p-8 text-center text-secondary bg-card border border-border rounded-xl">
+            No records found.
+          </div>
+        ) : (
+          records.map((record) => (
+            <div key={record.id} className="bg-card border border-border p-5 rounded-2xl flex flex-col space-y-4 shadow-xl">
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-secondary block text-[10px] uppercase tracking-wider mb-1">Date</span>
+                  <span className="font-bold text-white">
+                    {new Date(record.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                </div>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  record.status === 'Present' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
+                  'bg-red-500/10 text-red-400 border border-red-500/20'
+                }`}>
+                  {record.status}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5 text-xs">
+                <div>
+                  <span className="text-secondary block text-[10px] uppercase tracking-wider mb-1">Check-in Time</span>
+                  <span className="font-mono text-white">{record.time}</span>
+                </div>
+                <div>
+                  <span className="text-secondary block text-[10px] uppercase tracking-wider mb-1">Method</span>
+                  <span className="text-white capitalize">{record.method}</span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
