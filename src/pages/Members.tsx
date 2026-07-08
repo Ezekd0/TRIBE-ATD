@@ -134,7 +134,7 @@ const Members: React.FC = () => {
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {/* Filter Tabs */}
-        <div className="flex space-x-2 border-b border-white/10 pb-2 overflow-x-auto flex-1">
+        <div className="flex space-x-2 border-b border-white/10 pb-2 overflow-x-auto flex-1 w-full">
           {['ALL', 'PENDING', 'ACTIVE', 'SUSPENDED'].map((tab) => (
             <button
               key={tab}

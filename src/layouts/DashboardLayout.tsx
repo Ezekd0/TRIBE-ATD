@@ -39,7 +39,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ requiredRole }) => {
       </div>
 
       {/* Main content */}
-      <div className="md:pl-64 flex flex-col flex-1">
+      <div className="md:pl-64 flex flex-col flex-1 min-w-0 max-w-full">
         <Navbar 
           user={user} 
           onOpenSidebar={() => setSidebarOpen(true)} 
