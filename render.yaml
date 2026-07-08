@@ -19,3 +19,16 @@ services:
         value: 5000
       - key: JWT_SECRET
         generateValue: true
+
+  - type: web
+    name: tribe-atd-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
