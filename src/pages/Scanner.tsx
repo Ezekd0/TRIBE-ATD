@@ -38,6 +38,17 @@ const lookupUser = async (
     throw new Error('Member not found. Please check the ID and try again.');
   }
 
+  // Check user status
+  if (foundUser.status !== 'ACTIVE') {
+    if (foundUser.status === 'SUSPENDED') {
+      throw new Error('Access Denied: This account is currently suspended.');
+    } else if (foundUser.status === 'PENDING') {
+      throw new Error('Access Denied: Account is pending admin approval.');
+    } else {
+      throw new Error(`Access Denied: Account is inactive (Status: ${foundUser.status}).`);
+    }
+  }
+
   // 2. Check for an active attendance session today
   const { data: activeLogs } = await supabase
     .from('attendance_logs')

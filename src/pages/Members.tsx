@@ -81,8 +81,8 @@ const Members: React.FC = () => {
 
     try {
       if (type === 'DELETE') {
-        // Without an Edge Function, we mark the user as deleted in the public schema
-        await supabase.from('users').update({ status: 'DELETED' }).eq('id', member.id);
+        const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: member.id });
+        if (error) throw error;
         setMembers(members.filter(m => m.id !== member.id));
       } else if (type === 'RESET_PASSWORD') {
         await supabase.auth.resetPasswordForEmail(member.email);
