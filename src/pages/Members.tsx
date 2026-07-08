@@ -72,7 +72,8 @@ const Members: React.FC = () => {
     gender: 'Male',
     address: '',
     emergencyName: '',
-    emergencyPhone: ''
+    emergencyPhone: '',
+    tribeNumber: ''
   });
 
   const handleOpenEdit = (member: Member) => {
@@ -83,7 +84,8 @@ const Members: React.FC = () => {
       gender: member.gender || 'Male',
       address: member.address || '',
       emergencyName: member.emergencyName || '',
-      emergencyPhone: member.emergencyPhone || ''
+      emergencyPhone: member.emergencyPhone || '',
+      tribeNumber: member.tribeNumber || ''
     });
     setActiveDropdown(null);
   };
@@ -109,6 +111,7 @@ const Members: React.FC = () => {
           address: editFormData.address,
           emergency_contact_name: editFormData.emergencyName,
           emergency_contact_phone: editFormData.emergencyPhone,
+          tribe_number: editFormData.tribeNumber || null,
         })
         .eq('id', editProfileModal.id);
 
@@ -667,7 +670,7 @@ const Members: React.FC = () => {
               <h2 className="text-2xl font-black mb-6 mt-2">Edit Member Profile</h2>
               
               <form onSubmit={saveProfileEdit} className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-bold mb-1.5 text-white/60">Full Name</label>
                     <input
@@ -686,6 +689,17 @@ const Members: React.FC = () => {
                       name="phoneNumber"
                       required
                       value={editFormData.phoneNumber}
+                      onChange={handleEditChange}
+                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1.5 text-white/60">Tribe ID (Code)</label>
+                    <input
+                      type="text"
+                      name="tribeNumber"
+                      placeholder="e.g. IBX001"
+                      value={editFormData.tribeNumber || ''}
                       onChange={handleEditChange}
                       className="w-full bg-black border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
                     />

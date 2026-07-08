@@ -11,6 +11,7 @@ interface ScanResult {
   user_id: string;
   time: string;
   currentStatus: SessionStatus | null; // null means no active session (needs check-in)
+  userStatus: string;
 }
 
 /** Return the start-of-today ISO string in UTC for date filtering. */
@@ -21,35 +22,9 @@ const todayStart = (): string => {
 };
 
 /**
- * Look up a user by tribe_number, then check whether they already have an
- * ACTIVE attendance session today.  Returns a ScanResult or throws.
+ * Checks for an active attendance session today for the user.
  */
-const lookupUser = async (
-  tribeNumber: string,
-): Promise<ScanResult> => {
-  // 1. Find the user
-  const { data: foundUser, error: userError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('tribe_number', tribeNumber)
-    .single();
-
-  if (userError || !foundUser) {
-    throw new Error('Member not found. Please check the ID and try again.');
-  }
-
-  // Check user status
-  if (foundUser.status !== 'ACTIVE') {
-    if (foundUser.status === 'SUSPENDED') {
-      throw new Error('Access Denied: This account is currently suspended.');
-    } else if (foundUser.status === 'PENDING') {
-      throw new Error('Access Denied: Account is pending admin approval.');
-    } else {
-      throw new Error(`Access Denied: Account is inactive (Status: ${foundUser.status}).`);
-    }
-  }
-
-  // 2. Check for an active attendance session today
+const buildScanResult = async (foundUser: any): Promise<ScanResult> => {
   const { data: activeLogs } = await supabase
     .from('attendance_logs')
     .select('*')
@@ -66,11 +41,43 @@ const lookupUser = async (
     user_id: foundUser.id,
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     currentStatus: hasActiveSession ? 'ACTIVE' : null,
+    userStatus: foundUser.status,
   };
 };
 
 /**
- * Search by tribe_number OR phone_number and return a ScanResult.
+ * Look up a user by tribe_number, then check whether they already have an
+ * ACTIVE attendance session today. Returns a ScanResult or throws.
+ */
+const lookupUser = async (
+  tribeNumber: string,
+): Promise<ScanResult> => {
+  // 1. Find the user
+  const { data: foundUser, error: userError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('tribe_number', tribeNumber)
+    .single();
+
+  if (userError || !foundUser) {
+    // Try matching by UUID id directly
+    const { data: byUuid, error: uuidError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', tribeNumber)
+      .single();
+
+    if (uuidError || !byUuid) {
+      throw new Error('Member not found. Please check the ID and try again.');
+    }
+    return await buildScanResult(byUuid);
+  }
+
+  return await buildScanResult(foundUser);
+};
+
+/**
+ * Search by tribe_number, phone_number, OR email and return a ScanResult.
  */
 const searchUser = async (query: string): Promise<ScanResult> => {
   // Try tribe_number first
@@ -81,21 +88,32 @@ const searchUser = async (query: string): Promise<ScanResult> => {
     .single();
 
   if (byTribe) {
-    return lookupUser(byTribe.tribe_number);
+    return await lookupUser(byTribe.tribe_number);
   }
 
   // Fall back to phone_number
-  const { data: byPhone, error: phoneError } = await supabase
+  const { data: byPhone } = await supabase
     .from('users')
     .select('*')
     .eq('phone_number', query)
     .single();
 
-  if (phoneError || !byPhone) {
-    throw new Error('Member not found. Please check the ID or phone number.');
+  if (byPhone) {
+    return await lookupUser(byPhone.tribe_number ?? byPhone.id);
   }
 
-  return lookupUser(byPhone.tribe_number);
+  // Fall back to email (Gmail)
+  const { data: byEmail, error: emailError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', query)
+    .single();
+
+  if (emailError || !byEmail) {
+    throw new Error('Member not found. Please check the ID, phone number, or email.');
+  }
+
+  return await lookupUser(byEmail.tribe_number ?? byEmail.id);
 };
 
 const Scanner: React.FC = () => {
@@ -301,34 +319,61 @@ const Scanner: React.FC = () => {
               
               <div className="bg-white/5 border border-white/10 p-5 rounded-3xl mb-8 flex flex-col space-y-3 text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="text-secondary">Action Needed</span>
-                  {scanResult.currentStatus === 'ACTIVE' ? (
-                    <span className="text-red-500 font-bold bg-red-500/10 px-2 py-1 rounded">CHECK OUT</span>
-                  ) : (
-                    <span className="text-green-500 font-bold bg-green-500/10 px-2 py-1 rounded">CHECK IN</span>
-                  )}
+                  <span className="text-secondary">Account Status</span>
+                  <span className={`font-bold px-2 py-1 rounded text-xs ${
+                    scanResult.userStatus === 'ACTIVE' ? 'text-green-500 bg-green-500/10' :
+                    scanResult.userStatus === 'PENDING' ? 'text-yellow-500 bg-yellow-500/10' :
+                    scanResult.userStatus === 'SUSPENDED' ? 'text-orange-500 bg-orange-500/10' :
+                    'text-red-500 bg-red-500/10'
+                  }`}>
+                    {scanResult.userStatus}
+                  </span>
                 </div>
-                {scanResult.currentStatus === 'ACTIVE' && (
+                
+                {scanResult.userStatus === 'ACTIVE' ? (
+                  <div className="flex justify-between items-center pt-2 border-t border-border">
+                    <span className="text-secondary">Action Needed</span>
+                    {scanResult.currentStatus === 'ACTIVE' ? (
+                      <span className="text-red-500 font-bold bg-red-500/10 px-2 py-1 rounded">CHECK OUT</span>
+                    ) : (
+                      <span className="text-green-500 font-bold bg-green-500/10 px-2 py-1 rounded">CHECK IN</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-red-400 text-xs text-center pt-2 border-t border-white/5 font-bold">
+                    {scanResult.userStatus === 'PENDING' ? 'Awaiting Admin Approval' :
+                     scanResult.userStatus === 'SUSPENDED' ? 'Access Suspended' :
+                     'Account Deactivated / Deleted'}
+                  </div>
+                )}
+                
+                {scanResult.currentStatus === 'ACTIVE' && scanResult.userStatus === 'ACTIVE' && (
                   <div className="flex justify-between items-center pt-2 border-t border-border">
                     <span className="text-secondary">Time Inside</span>
-                    <span className="font-mono">4h 12m</span>
+                    <span className="font-mono">Active Session</span>
                   </div>
                 )}
               </div>
               
-              <button 
-                onClick={confirmAction}
-                disabled={loading}
-                className={`w-full py-5 rounded-full font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.2)] disabled:opacity-50 disabled:hover:scale-100 ${scanResult.currentStatus === 'ACTIVE' ? 'bg-red-500 text-white shadow-red-500/20' : 'bg-white text-black shadow-white/20'}`}
-              >
-                {loading ? (
-                  'Processing…'
-                ) : scanResult.currentStatus === 'ACTIVE' ? (
-                   <><LogOut className="w-5 h-5 mr-2" /> Complete Check Out</>
-                ) : (
-                   <><LogIn className="w-5 h-5 mr-2" /> Complete Check In</>
-                )}
-              </button>
+              {scanResult.userStatus === 'ACTIVE' ? (
+                <button 
+                  onClick={confirmAction}
+                  disabled={loading}
+                  className={`w-full py-5 rounded-full font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.2)] disabled:opacity-50 disabled:hover:scale-100 ${scanResult.currentStatus === 'ACTIVE' ? 'bg-red-500 text-white shadow-red-500/20' : 'bg-white text-black shadow-white/20'}`}
+                >
+                  {loading ? (
+                    'Processing…'
+                  ) : scanResult.currentStatus === 'ACTIVE' ? (
+                     <><LogOut className="w-5 h-5 mr-2" /> Complete Check Out</>
+                  ) : (
+                     <><LogIn className="w-5 h-5 mr-2" /> Complete Check In</>
+                  )}
+                </button>
+              ) : (
+                <div className="w-full py-5 bg-white/5 text-secondary border border-white/10 rounded-full font-bold text-center text-sm">
+                  Check-in Blocked (Status: {scanResult.userStatus})
+                </div>
+              )}
               
               <button 
                 onClick={() => { setScanResult(null); setError(null); setIsScanning(true); }}
