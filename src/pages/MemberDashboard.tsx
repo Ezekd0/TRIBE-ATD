@@ -1,10 +1,59 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { CheckCircle2, Clock, Calendar } from 'lucide-react';
+import { CheckCircle2, Clock, Calendar, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../services/supabase';
+
+interface AttendanceLog {
+  id: string;
+  check_in_time: string;
+  method: string;
+}
 
 const MemberDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [logs, setLogs] = useState<AttendanceLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('attendance_logs')
+          .select('id, check_in_time, method')
+          .eq('user_id', user.id)
+          .order('check_in_time', { ascending: false });
+
+        if (error) throw error;
+        if (data) {
+          setLogs(data);
+        }
+      } catch (err) {
+        console.error('Error fetching logs:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLogs();
+  }, [user]);
+
+  // Calculations
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const todaysLog = logs.find(log => new Date(log.check_in_time) >= today);
+  
+  // Calculate this week's attendance
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday as start
+  const logsThisWeek = logs.filter(log => new Date(log.check_in_time) >= startOfWeek);
+  
+  // Max days in week so far (assuming Monday-Friday or 5 day week)
+  const daysSoFar = Math.max(1, Math.min(5, today.getDay()));
+  const attendanceRate = Math.round((logsThisWeek.length / daysSoFar) * 100);
 
   return (
     <div className="space-y-6">
@@ -18,12 +67,18 @@ const MemberDashboard: React.FC = () => {
         <div className="bg-card border border-border p-6 rounded-xl">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-medium text-secondary">Today's Status</h3>
-            <CheckCircle2 className="text-green-500 h-5 w-5" />
+            {todaysLog ? (
+              <CheckCircle2 className="text-green-500 h-5 w-5" />
+            ) : (
+              <XCircle className="text-secondary h-5 w-5" />
+            )}
           </div>
-          <div className="text-2xl font-bold">Checked In</div>
-          <div className="text-sm text-secondary mt-1 flex items-center">
-            <Clock className="w-4 h-4 mr-1 inline" /> at 09:15 AM
-          </div>
+          <div className="text-2xl font-bold">{todaysLog ? 'Checked In' : 'Not Checked In'}</div>
+          {todaysLog && (
+            <div className="text-sm text-secondary mt-1 flex items-center">
+              <Clock className="w-4 h-4 mr-1 inline" /> at {new Date(todaysLog.check_in_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
         </div>
 
         {/* Attendance Summary */}
@@ -32,8 +87,8 @@ const MemberDashboard: React.FC = () => {
             <h3 className="font-medium text-secondary">This Week</h3>
             <Calendar className="text-primary h-5 w-5" />
           </div>
-          <div className="text-2xl font-bold">4 / 5 Days</div>
-          <div className="text-sm text-secondary mt-1">80% attendance rate</div>
+          <div className="text-2xl font-bold">{logsThisWeek.length} / {daysSoFar} Days</div>
+          <div className="text-sm text-secondary mt-1">{loading ? 'Loading...' : `${attendanceRate}% attendance rate`}</div>
         </div>
 
         {/* Quick Actions */}
@@ -56,18 +111,26 @@ const MemberDashboard: React.FC = () => {
           <Link to="/member/history" className="text-sm text-primary hover:underline">View all</Link>
         </div>
         <div className="divide-y divide-border">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="px-6 py-4 flex justify-between items-center">
-              <div>
-                <p className="font-medium">Checked In - Cave Workspace</p>
-                <p className="text-sm text-secondary">Verified by QR Scan</p>
+          {loading ? (
+            <div className="px-6 py-8 text-center text-secondary">Loading records...</div>
+          ) : logs.length === 0 ? (
+            <div className="px-6 py-8 text-center text-secondary">No recent check-ins found.</div>
+          ) : (
+            logs.slice(0, 3).map((log) => (
+              <div key={log.id} className="px-6 py-4 flex justify-between items-center">
+                <div>
+                  <p className="font-medium">Checked In - Cave Workspace</p>
+                  <p className="text-sm text-secondary">Verified by {log.method}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">
+                    {new Date(log.check_in_time).toLocaleDateString() === today.toLocaleDateString() ? 'Today' : new Date(log.check_in_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </p>
+                  <p className="text-sm text-secondary">{new Date(log.check_in_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="font-medium">Today</p>
-                <p className="text-sm text-secondary">09:15 AM</p>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

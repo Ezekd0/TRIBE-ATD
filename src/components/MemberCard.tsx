@@ -12,8 +12,8 @@ const MemberCard: React.FC<MemberCardProps> = ({ user, view = 'front' }) => {
   const [scale, setScale] = useState(1);
   
   // Format the id to look like a member code
-  const memberCode = user.tribe_number || `TRB-${new Date().getFullYear()}-${user.id.substring(0, 4).toUpperCase()}`;
-  const blockchainHash = user.on_chain_tx_hash || `0x${Math.random().toString(16).substr(2, 8)}...${Math.random().toString(16).substr(2, 4)}`;
+  const memberCode = user.tribe_number || `PENDING`;
+  const blockchainHash = user.on_chain_tx_hash || `PENDING`;
   
   useEffect(() => {
     const handleResize = () => {

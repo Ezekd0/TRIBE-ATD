@@ -1,15 +1,56 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
+import { supabase } from '../services/supabase';
+import { useAuth } from '../hooks/useAuth';
+
+interface AttendanceLog {
+  id: string;
+  date: string;
+  time: string;
+  method: string;
+  status: string;
+}
 
 const AttendanceHistory: React.FC = () => {
-  // Mock data
-  const records = [
-    { id: 1, date: '2026-06-24', time: '09:15 AM', method: 'QR Scan', status: 'Present' },
-    { id: 2, date: '2026-06-23', time: '08:50 AM', method: 'Manual', status: 'Present' },
-    { id: 3, date: '2026-06-22', time: '09:05 AM', method: 'QR Scan', status: 'Present' },
-    { id: 4, date: '2026-06-21', time: '09:30 AM', method: 'QR Scan', status: 'Present' },
-    { id: 5, date: '2026-06-18', time: '-', method: '-', status: 'Absent' },
-  ];
+  const { user } = useAuth();
+  const [records, setRecords] = useState<AttendanceLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('attendance_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('check_in_time', { ascending: false });
+
+        if (error) throw error;
+
+        if (data) {
+          const formattedLogs = data.map((log) => {
+            const dateObj = new Date(log.check_in_time);
+            return {
+              id: log.id,
+              date: dateObj.toISOString(),
+              time: dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+              method: log.method,
+              status: log.status
+            };
+          });
+          setRecords(formattedLogs);
+        }
+      } catch (err) {
+        console.error('Failed to fetch attendance logs:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLogs();
+  }, [user]);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -42,31 +83,40 @@ const AttendanceHistory: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {records.map((record) => (
-                <tr key={record.id} className="hover:bg-border/30 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">
-                    {new Date(record.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{record.time}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-secondary">{record.method}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      record.status === 'Present' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 
-                      'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    }`}>
-                      {record.status}
-                    </span>
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-secondary">
+                    Loading records...
                   </td>
                 </tr>
-              ))}
+              ) : records.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-secondary">
+                    No records found.
+                  </td>
+                </tr>
+              ) : (
+                records.map((record) => (
+                  <tr key={record.id} className="hover:bg-border/30 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap font-medium">
+                      {new Date(record.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">{record.time}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-secondary">{record.method}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        record.status === 'Present' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 
+                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                      }`}>
+                        {record.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-        {records.length === 0 && (
-          <div className="p-8 text-center text-secondary">
-            No records found.
-          </div>
-        )}
       </div>
     </div>
   );

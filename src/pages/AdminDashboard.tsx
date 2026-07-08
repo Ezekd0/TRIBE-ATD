@@ -1,33 +1,106 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid 
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert } from 'lucide-react';
-import { useRealTime } from '../contexts/RealTimeContext';
+import { supabase } from '../services/supabase';
+
+interface DashboardMetrics {
+  totalUsers: number;
+  activeAccounts: number;
+  suspended: number;
+  todaysCheckIns: number;
+  recentActivity: any[];
+  auditLogs: any[];
+}
 
 const AdminDashboard: React.FC = () => {
-  const { metrics } = useRealTime();
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    totalUsers: 0,
+    activeAccounts: 0,
+    suspended: 0,
+    todaysCheckIns: 0,
+    recentActivity: [],
+    auditLogs: []
+  });
 
-  // Mock Data for the week
+  const [loading, setLoading] = useState(true);
+
+  // Still keeping the mock graph for visual purposes until there's enough daily data
   const weeklyData = [
-    { name: 'Mon', sessions: 45 },
-    { name: 'Tue', sessions: 38 },
-    { name: 'Wed', sessions: 52 },
-    { name: 'Thu', sessions: 47 },
-    { name: 'Fri', sessions: 41 },
-    { name: 'Sat', sessions: 32 },
-    { name: 'Sun', sessions: 25 },
+    { name: 'Mon', sessions: 0 },
+    { name: 'Tue', sessions: 0 },
+    { name: 'Wed', sessions: 0 },
+    { name: 'Thu', sessions: 0 },
+    { name: 'Fri', sessions: 0 },
+    { name: 'Sat', sessions: 0 },
+    { name: 'Sun', sessions: 0 },
   ];
 
-  // Mock Audit Logs
-  const auditLogs = [
-    { id: 1, action: 'User Suspended', user: 'Admin User', target: 'John Doe', time: '10 mins ago', severity: 'high' },
-    { id: 2, action: 'Exported Reports', user: 'Admin User', target: 'Monthly CSV', time: '1 hour ago', severity: 'low' },
-    { id: 3, action: 'Profile Updated', user: 'System Admin', target: 'Jane Smith', time: '2 hours ago', severity: 'low' },
-    { id: 4, action: 'User Reactivated', user: 'System Admin', target: 'Michael Ross', time: '5 hours ago', severity: 'medium' },
-  ];
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Fetch user stats
+        const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
+        const { count: activeAccounts } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE');
+        const { count: suspended } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'SUSPENDED');
+
+        // Fetch today's check-ins
+        const { count: todaysCheckIns } = await supabase
+          .from('attendance_logs')
+          .select('*', { count: 'exact', head: true })
+          .gte('check_in_time', today.toISOString());
+
+        // Fetch recent check-ins
+        const { data: recentActivity } = await supabase
+          .from('attendance_logs')
+          .select('id, check_in_time, method, status, users ( full_name )')
+          .order('check_in_time', { ascending: false })
+          .limit(10);
+
+        // Fetch recent audit logs
+        const { data: auditLogs } = await supabase
+          .from('audit_logs')
+          .select('id, action, target_user_id, performed_by, created_at, metadata')
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        setMetrics({
+          totalUsers: totalUsers || 0,
+          activeAccounts: activeAccounts || 0,
+          suspended: suspended || 0,
+          todaysCheckIns: todaysCheckIns || 0,
+          recentActivity: recentActivity || [],
+          auditLogs: auditLogs || []
+        });
+      } catch (err) {
+        console.error('Error fetching admin dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+
+    // Set up real-time subscription for attendance logs to make the dashboard live!
+    const channel = supabase.channel('admin-dashboard')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'attendance_logs' }, () => {
+        fetchDashboardData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        fetchDashboardData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-10">
@@ -45,13 +118,13 @@ const AdminDashboard: React.FC = () => {
       {/* Top Metrics - Live Glassmorphism Panels */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: '👥 TOTAL USERS', value: '1,248', color: 'text-white' },
-          { label: '✅ ACTIVE ACCOUNTS', value: '1,203', color: 'text-green-400' },
-          { label: '🚫 SUSPENDED', value: '45', color: 'text-red-400' },
-          { label: '📍 CURRENTLY INSIDE', value: metrics.liveUsers, color: 'text-blue-400' },
-          { label: "🟢 TODAY'S CHECK-INS", value: metrics.todaysCheckIns, color: 'text-green-400' },
-          { label: '⚫ EXITED TODAY', value: metrics.exitedUsers, color: 'text-secondary' },
-          { label: '📅 TOTAL THIS WEEK', value: 312 + metrics.todaysCheckIns, color: 'text-white' },
+          { label: '👥 TOTAL USERS', value: loading ? '...' : metrics.totalUsers, color: 'text-white' },
+          { label: '✅ ACTIVE ACCOUNTS', value: loading ? '...' : metrics.activeAccounts, color: 'text-green-400' },
+          { label: '🚫 SUSPENDED', value: loading ? '...' : metrics.suspended, color: 'text-red-400' },
+          { label: '📍 CURRENTLY INSIDE', value: '0', color: 'text-blue-400' },
+          { label: "🟢 TODAY'S CHECK-INS", value: loading ? '...' : metrics.todaysCheckIns, color: 'text-green-400' },
+          { label: '⚫ EXITED TODAY', value: '0', color: 'text-secondary' },
+          { label: '📅 TOTAL THIS WEEK', value: loading ? '...' : metrics.todaysCheckIns, color: 'text-white' },
           { label: '🛡️ SECURITY ALERTS', value: '0', color: 'text-green-500' },
         ].map((metric, i) => (
           <motion.div 
@@ -101,6 +174,9 @@ const AdminDashboard: React.FC = () => {
           
           <div className="flex-1 overflow-y-auto pr-2 space-y-1 scrollbar-hide">
             <AnimatePresence>
+              {metrics.recentActivity.length === 0 && (
+                <div className="text-center text-secondary text-sm mt-10">No recent activity</div>
+              )}
               {metrics.recentActivity.map((log) => (
                 <motion.div 
                   key={log.id} 
@@ -111,13 +187,15 @@ const AdminDashboard: React.FC = () => {
                   className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 group hover:bg-white/5 rounded-2xl px-3 -mx-3 transition-colors"
                 >
                   <div className="flex items-center space-x-4">
-                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_10px_rgba(0,0,0,0.5)] ${log.action === 'CHECK_IN' ? 'bg-green-500 shadow-green-500/50' : 'bg-red-500 shadow-red-500/50'}`}></div>
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_10px_rgba(0,0,0,0.5)] bg-green-500 shadow-green-500/50"></div>
                     <div>
-                      <p className="font-bold text-sm text-white">{log.name}</p>
-                      <p className="text-[10px] text-secondary font-mono tracking-wider">{log.action}</p>
+                      <p className="font-bold text-sm text-white">{log.users?.full_name || 'Unknown User'}</p>
+                      <p className="text-[10px] text-secondary font-mono tracking-wider">CHECK_IN ({log.method})</p>
                     </div>
                   </div>
-                  <div className="text-xs text-[#B3B3B3] font-mono tabular-nums">{log.time}</div>
+                  <div className="text-xs text-[#B3B3B3] font-mono tabular-nums">
+                    {new Date(log.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -136,28 +214,25 @@ const AdminDashboard: React.FC = () => {
             <thead className="text-[10px] uppercase tracking-widest text-secondary border-b border-white/10">
               <tr>
                 <th className="px-4 py-3 font-medium">Action</th>
-                <th className="px-4 py-3 font-medium">Performed By</th>
-                <th className="px-4 py-3 font-medium">Target</th>
+                <th className="px-4 py-3 font-medium">Performed By ID</th>
+                <th className="px-4 py-3 font-medium">Target ID</th>
                 <th className="px-4 py-3 font-medium">Time</th>
-                <th className="px-4 py-3 font-medium text-right">Severity</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {auditLogs.map((log) => (
+              {metrics.auditLogs.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-secondary">
+                    No logs recorded yet.
+                  </td>
+                </tr>
+              )}
+              {metrics.auditLogs.map((log) => (
                 <tr key={log.id} className="hover:bg-white/5 transition-colors">
                   <td className="px-4 py-4 font-bold text-white">{log.action}</td>
-                  <td className="px-4 py-4 text-secondary">{log.user}</td>
-                  <td className="px-4 py-4 text-blue-300 font-mono text-xs">{log.target}</td>
-                  <td className="px-4 py-4 text-secondary text-xs">{log.time}</td>
-                  <td className="px-4 py-4 text-right">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      log.severity === 'high' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 
-                      log.severity === 'medium' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 
-                      'bg-green-500/10 text-green-500 border border-green-500/20'
-                    }`}>
-                      {log.severity}
-                    </span>
-                  </td>
+                  <td className="px-4 py-4 text-secondary text-xs font-mono truncate max-w-[100px]">{log.performed_by}</td>
+                  <td className="px-4 py-4 text-blue-300 font-mono text-xs truncate max-w-[100px]">{log.target_user_id || 'System'}</td>
+                  <td className="px-4 py-4 text-secondary text-xs">{new Date(log.created_at).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
