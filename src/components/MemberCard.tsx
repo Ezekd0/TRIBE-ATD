@@ -59,7 +59,7 @@ const MemberCard: React.FC<MemberCardProps> = ({ user, view = 'front' }) => {
       {/* Profile Photo */}
       <div className="absolute top-[130px] left-[40px] w-[200px] h-[250px] bg-[#1A1A1A] rounded-[20px] overflow-hidden shadow-2xl z-10 border-2 border-white/10">
         {user.profile_image_url ? (
-          <img src={user.profile_image_url} alt={user.full_name} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500" />
+          <img src={user.profile_image_url} alt={user.full_name} className="w-full h-full object-cover transition-all duration-500" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-white/20">
             <UserRound className="w-24 h-24" strokeWidth={1} />
