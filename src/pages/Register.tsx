@@ -108,6 +108,7 @@ const Register: React.FC = () => {
     );
   }
 
+  // Trigger production deployment promo
   return (
     <div className="w-full max-w-xl mx-auto">
       <div className="mb-10 text-center">
