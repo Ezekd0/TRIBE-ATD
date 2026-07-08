@@ -52,14 +52,20 @@ const Register: React.FC = () => {
     } catch (err: any) {
       console.error('Full registration error:', err);
       let errorMsg = 'Registration failed. Please try again.';
+      
       if (err instanceof Error) {
         errorMsg = err.message;
       } else if (err && typeof err === 'object') {
         errorMsg = err.message || JSON.stringify(err);
-        if (errorMsg === '{}') errorMsg = 'Database trigger failed. Did you run the SQL migration?';
       } else if (typeof err === 'string') {
         errorMsg = err;
       }
+
+      // Supabase sometimes returns "{}" as the error message when a database trigger fails
+      if (errorMsg === '{}') {
+        errorMsg = 'Database trigger failed. You MUST run the SQL setup script in your Supabase Dashboard -> SQL Editor.';
+      }
+      
       setError(errorMsg);
     } finally {
       setLoading(false);
