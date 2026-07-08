@@ -240,7 +240,9 @@ const Members: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {member.role === 'admin' ? (
+                    {member.role === 'super_admin' ? (
+                       <span className="text-purple-400 text-xs font-bold uppercase tracking-wider flex items-center"><Shield className="w-3 h-3 mr-1"/> Super Admin</span>
+                    ) : member.role === 'admin' ? (
                        <span className="text-blue-400 text-xs font-bold uppercase tracking-wider flex items-center"><Shield className="w-3 h-3 mr-1"/> Admin</span>
                     ) : (
                        <span className="text-secondary text-xs font-bold uppercase tracking-wider">Member</span>
