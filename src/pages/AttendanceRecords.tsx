@@ -1,25 +1,27 @@
-import React, { useState } from 'react';
-import { Search, Filter, Download, Calendar as CalendarIcon, Clock, LogOut, ChevronDown, FileText, FileSpreadsheet, FileBox } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, Download, Calendar as CalendarIcon, Clock, ChevronDown, FileText, FileSpreadsheet, FileBox, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SessionStatus } from '../types';
+import { supabase } from '../services/supabase';
 
-// Mock data generator for the daily logs
-const generateMockSessions = () => {
-  return [
-    { id: '1', name: 'Victor Clement', phone: '+1234567890', memberCode: 'KIEV-24-06578', checkIn: '09:15 AM', checkOut: null, duration: '4h 15m', status: 'ACTIVE' as SessionStatus },
-    { id: '2', name: 'Esther James', phone: '+1987654321', memberCode: 'KIEV-24-09876', checkIn: '09:16 AM', checkOut: null, duration: '4h 14m', status: 'ACTIVE' as SessionStatus },
-    { id: '3', name: 'Daniel Ekene', phone: '+1555666777', memberCode: 'KIEV-24-05555', checkIn: '08:00 AM', checkOut: '11:17 AM', duration: '3h 17m', status: 'EXITED' as SessionStatus },
-    { id: '4', name: 'Grace Paul', phone: '+1444333222', memberCode: 'KIEV-24-04444', checkIn: '12:18 PM', checkOut: null, duration: '1h 12m', status: 'ACTIVE' as SessionStatus },
-    { id: '5', name: 'Samuel Doe', phone: '+1111222333', memberCode: 'KIEV-24-01111', checkIn: '09:00 AM', checkOut: '01:20 PM', duration: '4h 20m', status: 'EXITED' as SessionStatus },
-  ];
-};
+interface AttendanceRecord {
+  id: string;
+  name: string;
+  phone: string;
+  memberCode: string;
+  checkIn: string;
+  method: string;
+  status: SessionStatus;
+}
 
 const AttendanceRecords: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'EXITED'>('ALL');
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [sessions, setSessions] = useState<AttendanceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // Date ribbon state (mock 7 days)
+  // Date ribbon state (7 days)
   const today = new Date();
   const dates = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
@@ -28,7 +30,47 @@ const AttendanceRecords: React.FC = () => {
   }).reverse();
   const [selectedDate, setSelectedDate] = useState<number>(dates[6].getTime()); // Default to today
 
-  const sessions = generateMockSessions();
+  // Fetch attendance logs from Supabase when selectedDate changes
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      setLoading(true);
+
+      const selected = new Date(selectedDate);
+      const startOfDay = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate()).toISOString();
+      const endOfDay = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate() + 1).toISOString();
+
+      const { data, error } = await supabase
+        .from('attendance_logs')
+        .select('id, check_in_time, method, status, users ( full_name, phone_number, tribe_number )')
+        .gte('check_in_time', startOfDay)
+        .lt('check_in_time', endOfDay)
+        .order('check_in_time', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching attendance logs:', error);
+        setSessions([]);
+      } else {
+        const mapped: AttendanceRecord[] = (data ?? []).map((row: any) => ({
+          id: row.id,
+          name: row.users?.full_name ?? 'Unknown',
+          phone: row.users?.phone_number ?? '--',
+          memberCode: row.users?.tribe_number ?? '--',
+          checkIn: new Date(row.check_in_time).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          }),
+          method: row.method ?? '--',
+          status: 'ACTIVE' as SessionStatus,
+        }));
+        setSessions(mapped);
+      }
+
+      setLoading(false);
+    };
+
+    fetchAttendance();
+  }, [selectedDate]);
 
   const filteredSessions = sessions.filter(session => {
     const term = searchTerm.toLowerCase();
@@ -146,14 +188,13 @@ const AttendanceRecords: React.FC = () => {
               <tr>
                 <th className="px-6 py-4 font-medium">Member Identity</th>
                 <th className="px-6 py-4 font-medium">ID Number</th>
-                <th className="px-6 py-4 font-medium">Time In</th>
-                <th className="px-6 py-4 font-medium">Time Out</th>
-                <th className="px-6 py-4 font-medium">Duration</th>
+                <th className="px-6 py-4 font-medium">Check-in Time</th>
+                <th className="px-6 py-4 font-medium">Method</th>
                 <th className="px-6 py-4 font-medium text-right">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filteredSessions.map((session) => (
+              {!loading && filteredSessions.map((session) => (
                 <tr key={session.id} className="hover:bg-white/5 transition-colors group">
                   <td className="px-6 py-5">
                     <div className="flex items-center space-x-4">
@@ -176,35 +217,28 @@ const AttendanceRecords: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    {session.checkOut ? (
-                      <div className="flex items-center text-secondary">
-                        <LogOut className="w-3 h-3 mr-1.5" />
-                        <span className="font-mono tabular-nums">{session.checkOut}</span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-secondary italic">--</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 font-mono text-sm tabular-nums text-secondary">
-                    {session.duration}
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-secondary uppercase tracking-wider border border-white/10">
+                      {session.method}
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {session.status === 'ACTIVE' ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-500/10 text-green-500 uppercase tracking-wider border border-green-500/20">
-                        Active Inside
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-secondary/10 text-secondary uppercase tracking-wider border border-secondary/20">
-                        Exited
-                      </span>
-                    )}
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-500/10 text-green-500 uppercase tracking-wider border border-green-500/20">
+                      Present
+                    </span>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
           
-          {filteredSessions.length === 0 && (
+          {loading && (
+            <div className="p-12 text-center text-secondary flex flex-col items-center">
+              <Loader2 className="w-10 h-10 mb-4 opacity-40 animate-spin" />
+              <p>Loading attendance records...</p>
+            </div>
+          )}
+
+          {!loading && filteredSessions.length === 0 && (
             <div className="p-12 text-center text-secondary flex flex-col items-center">
               <CalendarIcon className="w-12 h-12 mb-4 opacity-20" />
               <p>No sessions found for this date or filter.</p>
