@@ -134,11 +134,26 @@ const Scanner: React.FC = () => {
               setLoading(true);
               setError(null);
               try {
-                const data = JSON.parse(result.getText());
-                if (!data.tribe_number) {
-                  throw new Error('Invalid QR code: missing tribe_number.');
-                }
-                const scanData = await lookupUser(data.tribe_number);
+                let tribeNumber = '';
+                const rawText = result.getText().trim();
+                
+                try {
+                  const data = JSON.parse(rawText);
+                tribeNumber = data.tribe_number;
+              } catch (e) {
+                // If it is not valid JSON, treat the raw scanned text as the ID directly
+                tribeNumber = rawText;
+              }
+
+              if (!tribeNumber) {
+                throw new Error('Invalid QR code: empty ID.');
+              }
+
+              if (tribeNumber.toUpperCase() === 'PENDING') {
+                throw new Error('Access Denied: This member is PENDING approval. Please approve them in the Tribe Directory first.');
+              }
+
+              const scanData = await lookupUser(tribeNumber);
                 setScanResult(scanData);
                 if (controls) controls.stop();
               } catch (err: any) {
