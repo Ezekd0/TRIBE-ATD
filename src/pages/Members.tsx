@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MoreVertical, ShieldAlert, UserX, UserCheck, Trash2, Eye, History, Shield, CheckCircle, Download, KeyRound } from 'lucide-react';
+import { Search, MoreVertical, ShieldAlert, UserX, UserCheck, Trash2, Eye, History, Shield, CheckCircle, Download, KeyRound, Edit } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
@@ -18,6 +18,8 @@ interface Member {
   emergencyName?: string;
   emergencyPhone?: string;
   role: 'member' | 'admin' | 'super_admin';
+  phoneNumber?: string;
+  gender?: string;
 }
 
 const Members: React.FC = () => {
@@ -44,7 +46,9 @@ const Members: React.FC = () => {
         address: u.address,
         emergencyName: u.emergency_contact_name,
         emergencyPhone: u.emergency_contact_phone,
-        role: u.role
+        role: u.role,
+        phoneNumber: u.phone_number,
+        gender: u.gender
       }));
       setMembers(formatted);
     } catch (err) {
@@ -60,6 +64,63 @@ const Members: React.FC = () => {
   const [showConfirmModal, setShowConfirmModal] = useState<{ type: 'APPROVE' | 'SUSPEND' | 'REACTIVATE' | 'DELETE' | 'PROMOTE' | 'RESET_PASSWORD', member: Member } | null>(null);
   const [viewProfileModal, setViewProfileModal] = useState<Member | null>(null);
   const [showReportDropdown, setShowReportDropdown] = useState(false);
+
+  const [editProfileModal, setEditProfileModal] = useState<Member | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    phoneNumber: '',
+    gender: 'Male',
+    address: '',
+    emergencyName: '',
+    emergencyPhone: ''
+  });
+
+  const handleOpenEdit = (member: Member) => {
+    setEditProfileModal(member);
+    setEditFormData({
+      name: member.name || '',
+      phoneNumber: member.phoneNumber || '',
+      gender: member.gender || 'Male',
+      address: member.address || '',
+      emergencyName: member.emergencyName || '',
+      emergencyPhone: member.emergencyPhone || ''
+    });
+    setActiveDropdown(null);
+  };
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setEditFormData({
+      ...editFormData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const saveProfileEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editProfileModal) return;
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          full_name: editFormData.name,
+          phone_number: editFormData.phoneNumber,
+          gender: editFormData.gender,
+          address: editFormData.address,
+          emergency_contact_name: editFormData.emergencyName,
+          emergency_contact_phone: editFormData.emergencyPhone,
+        })
+        .eq('id', editProfileModal.id);
+
+      if (error) throw error;
+      
+      setEditProfileModal(null);
+      fetchUsers();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update profile');
+    }
+  };
 
   const filteredMembers = members.filter(member => {
     const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -270,6 +331,10 @@ const Members: React.FC = () => {
                               <Eye className="w-4 h-4 mr-3 text-secondary" /> View Secure Profile
                             </button>
                             
+                            <button onClick={() => handleOpenEdit(member)} className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-white/10 rounded-xl flex items-center transition-colors">
+                              <Edit className="w-4 h-4 mr-3 text-secondary" /> Edit Profile Details
+                            </button>
+                            
                             {member.status === 'PENDING' && (
                                <button onClick={() => handleAction('APPROVE', member)} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-green-400/10 rounded-xl flex items-center transition-colors">
                                  <CheckCircle className="w-4 h-4 mr-3" /> Approve Access
@@ -367,6 +432,10 @@ const Members: React.FC = () => {
                       <div className="p-2 space-y-1">
                         <button onClick={() => { setViewProfileModal(member); setActiveDropdown(null); }} className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-white/10 rounded-xl flex items-center transition-colors">
                           <Eye className="w-4 h-4 mr-3 text-secondary" /> View Secure Profile
+                        </button>
+                        
+                        <button onClick={() => handleOpenEdit(member)} className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-white/10 rounded-xl flex items-center transition-colors">
+                          <Edit className="w-4 h-4 mr-3 text-secondary" /> Edit Profile Details
                         </button>
                         
                         {member.status === 'PENDING' && (
@@ -490,9 +559,19 @@ const Members: React.FC = () => {
                   <div className="bg-black border border-white/5 p-4 rounded-xl">
                     <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Secure Details</h3>
                     <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-secondary text-[10px] uppercase tracking-wider block">Phone Number</span>
+                          <span className="text-white font-medium text-sm">{viewProfileModal.phoneNumber || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-secondary text-[10px] uppercase tracking-wider block">Gender</span>
+                          <span className="text-white font-medium text-sm">{viewProfileModal.gender || 'N/A'}</span>
+                        </div>
+                      </div>
                       <div>
-                        <span className="text-secondary text-sm block">Residential Address</span>
-                        <span className="text-white font-medium">{viewProfileModal.address || 'N/A'}</span>
+                        <span className="text-secondary text-[10px] uppercase tracking-wider block">Residential Address</span>
+                        <span className="text-white font-medium text-sm">{viewProfileModal.address || 'N/A'}</span>
                       </div>
                     </div>
                   </div>
@@ -522,12 +601,136 @@ const Members: React.FC = () => {
                   )}
                 </div>
 
-                <button onClick={() => setViewProfileModal(null)} className="mt-8 w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors">
-                  Close Profile
-                </button>
+                <div className="flex space-x-3 mt-8">
+                  <button onClick={() => { handleOpenEdit(viewProfileModal); setViewProfileModal(null); }} className="flex-1 bg-white text-black hover:bg-gray-200 font-bold py-3 rounded-xl transition-colors text-sm flex items-center justify-center">
+                    <Edit className="w-4 h-4 mr-2" /> Edit Details
+                  </button>
+                  <button onClick={() => setViewProfileModal(null)} className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors text-sm">
+                    Close Profile
+                  </button>
+                </div>
              </motion.div>
            </div>
          )}
+      </AnimatePresence>
+
+      {/* Edit Profile Modal */}
+      <AnimatePresence>
+        {editProfileModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#111] border border-white/10 p-5 sm:p-8 rounded-[2rem] max-w-xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            >
+              <div className="absolute top-4 right-4 text-[10px] uppercase tracking-widest text-secondary flex items-center">
+                <Shield className="w-3 h-3 mr-1 text-blue-500" /> Admin Access
+              </div>
+              
+              <h2 className="text-2xl font-black mb-6 mt-2">Edit Member Profile</h2>
+              
+              <form onSubmit={saveProfileEdit} className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold mb-1.5 text-white/60">Full Name</label>
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      value={editFormData.name}
+                      onChange={handleEditChange}
+                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1.5 text-white/60">Phone Number</label>
+                    <input
+                      type="tel"
+                      name="phoneNumber"
+                      required
+                      value={editFormData.phoneNumber}
+                      onChange={handleEditChange}
+                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold mb-1.5 text-white/60">Gender</label>
+                    <select
+                      name="gender"
+                      required
+                      value={editFormData.gender}
+                      onChange={handleEditChange}
+                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-white appearance-none"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1.5 text-white/60">Residential Address</label>
+                    <input
+                      type="text"
+                      name="address"
+                      required
+                      value={editFormData.address}
+                      onChange={handleEditChange}
+                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/5">
+                  <h3 className="text-xs font-bold text-white/60 mb-3 uppercase tracking-widest">Emergency Contact</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5 text-white/60">Contact Name</label>
+                      <input
+                        type="text"
+                        name="emergencyName"
+                        required
+                        value={editFormData.emergencyName}
+                        onChange={handleEditChange}
+                        className="w-full bg-black border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5 text-white/60">Contact Phone</label>
+                      <input
+                        type="tel"
+                        name="emergencyPhone"
+                        required
+                        value={editFormData.emergencyPhone}
+                        onChange={handleEditChange}
+                        className="w-full bg-black border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 pt-6">
+                  <button 
+                    type="button"
+                    onClick={() => setEditProfileModal(null)}
+                    className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 bg-white text-black hover:bg-gray-200 font-bold py-3 rounded-xl transition-colors text-sm shadow-lg shadow-white/5"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       {/* Confirmation Modal */}

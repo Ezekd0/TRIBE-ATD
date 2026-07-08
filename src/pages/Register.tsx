@@ -40,8 +40,29 @@ const Register: React.FC = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Your password must be at least 6 characters long.');
+    const password = formData.password;
+    if (password.length < 8) {
+      setError('Your password must be at least 8 characters long.');
+      setLoading(false);
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError('Your password must contain at least one uppercase letter (A-Z).');
+      setLoading(false);
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      setError('Your password must contain at least one lowercase letter (a-z).');
+      setLoading(false);
+      return;
+    }
+    if (!/\d/.test(password)) {
+      setError('Your password must contain at least one number (0-9).');
+      setLoading(false);
+      return;
+    }
+    if (!/[@$!%*?&_#^()\-+=]/.test(password)) {
+      setError('Your password must contain at least one special character (e.g., @, $, !, %, *, ?, &, #, _).');
       setLoading(false);
       return;
     }
