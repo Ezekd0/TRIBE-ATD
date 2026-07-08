@@ -109,32 +109,67 @@ const Scanner: React.FC = () => {
 
   useEffect(() => {
     let reader: BrowserMultiFormatReader;
+    let controls: any;
 
     if (isScanning && videoRef.current) {
       reader = new BrowserMultiFormatReader();
-      reader.decodeFromVideoDevice(undefined, videoRef.current, async (result) => {
-        if (result) {
-          setLoading(true);
-          setError(null);
-          try {
-            const data = JSON.parse(result.getText());
-            if (!data.tribe_number) {
-              throw new Error('Invalid QR code: missing tribe_number.');
+      
+      const startScanner = async () => {
+        try {
+          const videoDevices = await BrowserMultiFormatReader.listVideoInputDevices();
+          // Find rear-facing back camera
+          const backCamera = videoDevices.find(device => 
+            device.label.toLowerCase().includes('back') || 
+            device.label.toLowerCase().includes('rear') ||
+            device.label.toLowerCase().includes('environment')
+          );
+          
+          const deviceId = backCamera ? backCamera.deviceId : undefined;
+          
+          const videoElement = videoRef.current;
+          if (!videoElement) return;
+          
+          controls = await reader.decodeFromVideoDevice(deviceId, videoElement, async (result) => {
+            if (result) {
+              setLoading(true);
+              setError(null);
+              try {
+                const data = JSON.parse(result.getText());
+                if (!data.tribe_number) {
+                  throw new Error('Invalid QR code: missing tribe_number.');
+                }
+                const scanData = await lookupUser(data.tribe_number);
+                setScanResult(scanData);
+                if (controls) controls.stop();
+              } catch (err: any) {
+                setError(err.message || 'Failed to process QR code.');
+                setScanResult(null);
+              } finally {
+                setLoading(false);
+                setIsScanning(false);
+              }
             }
-            const scanData = await lookupUser(data.tribe_number);
-            setScanResult(scanData);
-          } catch (err: any) {
-            setError(err.message || 'Failed to process QR code.');
-            setScanResult(null);
-          } finally {
-            setLoading(false);
-            setIsScanning(false);
+          });
+        } catch (err: any) {
+          console.error('Camera initialization failed:', err);
+          let userFriendlyMsg = 'Could not access your camera. ';
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            userFriendlyMsg += 'Please enable camera permissions in your browser settings and try again.';
+          } else {
+            userFriendlyMsg += 'Please ensure no other app is using the camera, use HTTPS, and try again.';
           }
+          setError(userFriendlyMsg);
         }
-      });
+      };
+
+      startScanner();
     }
 
-    return () => {};
+    return () => {
+      if (controls) {
+        controls.stop();
+      }
+    };
   }, [isScanning]);
 
   const handleManualSearch = async (e: React.FormEvent) => {
