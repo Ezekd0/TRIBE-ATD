@@ -31,10 +31,24 @@ const Register: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Client-side validation: Enforce standard email format (name@example.com)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      setError('Please enter a valid email address (e.g., name@example.com).');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError('Your password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
     
     try {
       const { error: authError } = await supabase.auth.signUp({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
         options: {
           data: {
@@ -51,17 +65,21 @@ const Register: React.FC = () => {
       setIsSubmitted(true);
     } catch (err: any) {
       console.error('Full registration error:', err);
-      let errorMsg = 'Registration failed. Please try again.';
+      let errorMsg = 'Unable to complete registration. Please try again.';
       
-      if (err && typeof err === 'object') {
-        errorMsg = err.message || JSON.stringify(err);
-      } else if (typeof err === 'string') {
-        errorMsg = err;
-      }
-
-      // If the error message is empty or serialized as empty object, show a generic friendly error
-      if (errorMsg === '{}' || !errorMsg) {
-        errorMsg = 'Registration failed. Please double-check your email format, password length, and try again.';
+      const rawMessage = err?.message || '';
+      
+      // Translate developer errors into friendly client-facing corrections
+      if (rawMessage.includes('already registered') || rawMessage.includes('email_exists')) {
+        errorMsg = 'This email address is already registered. Please sign in instead.';
+      } else if (rawMessage.includes('valid email') || rawMessage.includes('invalid format')) {
+        errorMsg = 'Please enter a valid email address (e.g. name@example.com).';
+      } else if (rawMessage.includes('should be at least')) {
+        errorMsg = 'Your password must be at least 6 characters long.';
+      } else if (rawMessage.includes('rate limit')) {
+        errorMsg = 'Too many registration requests. Please try again in a few minutes.';
+      } else if (rawMessage) {
+        errorMsg = rawMessage;
       }
       
       setError(errorMsg);
