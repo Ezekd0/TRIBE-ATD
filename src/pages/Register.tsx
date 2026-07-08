@@ -53,17 +53,15 @@ const Register: React.FC = () => {
       console.error('Full registration error:', err);
       let errorMsg = 'Registration failed. Please try again.';
       
-      if (err instanceof Error) {
-        errorMsg = err.message;
-      } else if (err && typeof err === 'object') {
+      if (err && typeof err === 'object') {
         errorMsg = err.message || JSON.stringify(err);
       } else if (typeof err === 'string') {
         errorMsg = err;
       }
 
-      // Supabase sometimes returns "{}" as the error message when a database trigger fails
-      if (errorMsg === '{}') {
-        errorMsg = 'Database trigger failed. You MUST run the SQL setup script in your Supabase Dashboard -> SQL Editor.';
+      // If the error message is empty or serialized as empty object, show a generic friendly error
+      if (errorMsg === '{}' || !errorMsg) {
+        errorMsg = 'Registration failed. Please double-check your email format, password length, and try again.';
       }
       
       setError(errorMsg);
