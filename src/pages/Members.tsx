@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 
-type MemberStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED';
+type MemberStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'DELETED';
 
 interface Member {
   id: string;
@@ -26,7 +26,7 @@ const Members: React.FC = () => {
   const { user } = useAuth();
   const currentUserRole = user?.role;
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterTab, setFilterTab] = useState<'ALL' | 'PENDING' | 'ACTIVE' | 'SUSPENDED'>('ALL');
+  const [filterTab, setFilterTab] = useState<'ALL' | 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'DELETED'>('ALL');
   
   const [members, setMembers] = useState<Member[]>([]);
 
@@ -61,7 +61,7 @@ const Members: React.FC = () => {
   }, []);
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [showConfirmModal, setShowConfirmModal] = useState<{ type: 'APPROVE' | 'SUSPEND' | 'REACTIVATE' | 'DELETE' | 'PROMOTE' | 'RESET_PASSWORD', member: Member } | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState<{ type: 'APPROVE' | 'SUSPEND' | 'REACTIVATE' | 'DELETE' | 'PROMOTE' | 'RESET_PASSWORD' | 'SOFT_DELETE', member: Member } | null>(null);
   const [viewProfileModal, setViewProfileModal] = useState<Member | null>(null);
   const [showReportDropdown, setShowReportDropdown] = useState(false);
 
@@ -127,11 +127,11 @@ const Members: React.FC = () => {
                           member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (member.tribeNumber && member.tribeNumber.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    if (filterTab === 'ALL') return matchesSearch;
+    if (filterTab === 'ALL') return matchesSearch && member.status !== 'DELETED';
     return matchesSearch && member.status === filterTab;
   });
 
-  const handleAction = (type: 'APPROVE' | 'SUSPEND' | 'REACTIVATE' | 'DELETE' | 'PROMOTE' | 'RESET_PASSWORD', member: Member) => {
+  const handleAction = (type: 'APPROVE' | 'SUSPEND' | 'REACTIVATE' | 'DELETE' | 'PROMOTE' | 'RESET_PASSWORD' | 'SOFT_DELETE', member: Member) => {
     setShowConfirmModal({ type, member });
     setActiveDropdown(null);
   };
@@ -154,6 +154,7 @@ const Members: React.FC = () => {
         if (type === 'APPROVE') newStatus = 'ACTIVE';
         if (type === 'SUSPEND') newStatus = 'SUSPENDED';
         if (type === 'REACTIVATE') newStatus = 'ACTIVE';
+        if (type === 'SOFT_DELETE') newStatus = 'DELETED';
         if (type === 'PROMOTE') newRole = 'admin';
 
         await supabase.from('users').update({ status: newStatus, role: newRole }).eq('id', member.id);
@@ -196,7 +197,7 @@ const Members: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {/* Filter Tabs */}
         <div className="flex space-x-2 border-b border-white/10 pb-2 overflow-x-auto flex-1 w-full">
-          {['ALL', 'PENDING', 'ACTIVE', 'SUSPENDED'].map((tab) => (
+          {['ALL', 'PENDING', 'ACTIVE', 'SUSPENDED', 'DELETED'].map((tab) => (
             <button
               key={tab}
               onClick={() => setFilterTab(tab as any)}
@@ -206,10 +207,15 @@ const Members: React.FC = () => {
                   : 'text-secondary hover:text-white hover:bg-white/5'
               }`}
             >
-              {tab}
+              {tab === 'DELETED' ? 'DELETE WAITING' : tab}
               {tab === 'PENDING' && members.filter(m => m.status === 'PENDING').length > 0 && (
                 <span className="ml-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">
                   {members.filter(m => m.status === 'PENDING').length}
+                </span>
+              )}
+              {tab === 'DELETED' && members.filter(m => m.status === 'DELETED').length > 0 && (
+                <span className="ml-2 bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">
+                  {members.filter(m => m.status === 'DELETED').length}
                 </span>
               )}
             </button>
@@ -346,34 +352,49 @@ const Members: React.FC = () => {
                               <>
                                 <div className="h-px bg-white/10 my-1 w-full" />
                                 
-                                {member.status === 'ACTIVE' && member.role !== 'super_admin' && (
-                                  <button onClick={() => handleAction('SUSPEND', member)} className="w-full text-left px-4 py-2.5 text-sm text-yellow-400 hover:bg-yellow-400/10 rounded-xl flex items-center transition-colors">
-                                    <ShieldAlert className="w-4 h-4 mr-3" /> Suspend User
-                                  </button>
-                                )}
+                                {member.status === 'DELETED' ? (
+                                  <>
+                                    <button onClick={() => handleAction('REACTIVATE', member)} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-green-400/10 rounded-xl flex items-center transition-colors">
+                                      <UserCheck className="w-4 h-4 mr-3" /> Restore Member
+                                    </button>
+                                    {member.role !== 'super_admin' && (
+                                      <button onClick={() => handleAction('DELETE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
+                                        <Trash2 className="w-4 h-4 mr-3" /> Purge Permanently
+                                      </button>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
+                                    {member.status === 'ACTIVE' && member.role !== 'super_admin' && (
+                                      <button onClick={() => handleAction('SUSPEND', member)} className="w-full text-left px-4 py-2.5 text-sm text-yellow-400 hover:bg-yellow-400/10 rounded-xl flex items-center transition-colors">
+                                        <ShieldAlert className="w-4 h-4 mr-3" /> Suspend User
+                                      </button>
+                                    )}
 
-                                {member.status !== 'PENDING' && (
-                                  <button onClick={() => handleAction('RESET_PASSWORD', member)} className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-white/10 rounded-xl flex items-center transition-colors">
-                                    <KeyRound className="w-4 h-4 mr-3 text-secondary" /> Reset Password
-                                  </button>
-                                )}
-                                
-                                {member.status === 'SUSPENDED' && (
-                                  <button onClick={() => handleAction('REACTIVATE', member)} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-green-400/10 rounded-xl flex items-center transition-colors">
-                                    <UserCheck className="w-4 h-4 mr-3" /> Reactivate User
-                                  </button>
-                                )}
+                                    {member.status !== 'PENDING' && (
+                                      <button onClick={() => handleAction('RESET_PASSWORD', member)} className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-white/10 rounded-xl flex items-center transition-colors">
+                                        <KeyRound className="w-4 h-4 mr-3 text-secondary" /> Reset Password
+                                      </button>
+                                    )}
+                                    
+                                    {member.status === 'SUSPENDED' && (
+                                      <button onClick={() => handleAction('REACTIVATE', member)} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-green-400/10 rounded-xl flex items-center transition-colors">
+                                        <UserCheck className="w-4 h-4 mr-3" /> Reactivate User
+                                      </button>
+                                    )}
 
-                                {currentUserRole === 'super_admin' && member.role === 'member' && member.status === 'ACTIVE' && (
-                                  <button onClick={() => handleAction('PROMOTE', member)} className="w-full text-left px-4 py-2.5 text-sm text-blue-400 hover:bg-blue-400/10 rounded-xl flex items-center transition-colors">
-                                    <Shield className="w-4 h-4 mr-3" /> Grant Admin Rights
-                                  </button>
-                                )}
+                                    {currentUserRole === 'super_admin' && member.role === 'member' && member.status === 'ACTIVE' && (
+                                      <button onClick={() => handleAction('PROMOTE', member)} className="w-full text-left px-4 py-2.5 text-sm text-blue-400 hover:bg-blue-400/10 rounded-xl flex items-center transition-colors">
+                                        <Shield className="w-4 h-4 mr-3" /> Grant Admin Rights
+                                      </button>
+                                    )}
 
-                                {member.role !== 'super_admin' && (
-                                  <button onClick={() => handleAction('DELETE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
-                                    <Trash2 className="w-4 h-4 mr-3" /> Permanently Delete
-                                  </button>
+                                    {member.role !== 'super_admin' && (
+                                      <button onClick={() => handleAction('SOFT_DELETE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
+                                        <Trash2 className="w-4 h-4 mr-3" /> Delete Account
+                                      </button>
+                                    )}
+                                  </>
                                 )}
                               </>
                             )}
@@ -449,34 +470,49 @@ const Members: React.FC = () => {
                           <>
                             <div className="h-px bg-white/10 my-1 w-full" />
                             
-                            {member.status === 'ACTIVE' && member.role !== 'super_admin' && (
-                              <button onClick={() => handleAction('SUSPEND', member)} className="w-full text-left px-4 py-2.5 text-sm text-yellow-400 hover:bg-yellow-400/10 rounded-xl flex items-center transition-colors">
-                                <ShieldAlert className="w-4 h-4 mr-3" /> Suspend User
-                              </button>
-                            )}
+                            {member.status === 'DELETED' ? (
+                              <>
+                                <button onClick={() => handleAction('REACTIVATE', member)} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-green-400/10 rounded-xl flex items-center transition-colors">
+                                  <UserCheck className="w-4 h-4 mr-3" /> Restore Member
+                                </button>
+                                {member.role !== 'super_admin' && (
+                                  <button onClick={() => handleAction('DELETE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
+                                    <Trash2 className="w-4 h-4 mr-3" /> Purge Permanently
+                                  </button>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                {member.status === 'ACTIVE' && member.role !== 'super_admin' && (
+                                  <button onClick={() => handleAction('SUSPEND', member)} className="w-full text-left px-4 py-2.5 text-sm text-yellow-400 hover:bg-yellow-400/10 rounded-xl flex items-center transition-colors">
+                                    <ShieldAlert className="w-4 h-4 mr-3" /> Suspend User
+                                  </button>
+                                )}
 
-                            {member.status !== 'PENDING' && (
-                              <button onClick={() => handleAction('RESET_PASSWORD', member)} className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-white/10 rounded-xl flex items-center transition-colors">
-                                <KeyRound className="w-4 h-4 mr-3 text-secondary" /> Reset Password
-                              </button>
-                            )}
-                            
-                            {member.status === 'SUSPENDED' && (
-                              <button onClick={() => handleAction('REACTIVATE', member)} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-green-400/10 rounded-xl flex items-center transition-colors">
-                                <UserCheck className="w-4 h-4 mr-3" /> Reactivate User
-                              </button>
-                            )}
+                                {member.status !== 'PENDING' && (
+                                  <button onClick={() => handleAction('RESET_PASSWORD', member)} className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-white/10 rounded-xl flex items-center transition-colors">
+                                    <KeyRound className="w-4 h-4 mr-3 text-secondary" /> Reset Password
+                                  </button>
+                                )}
+                                
+                                {member.status === 'SUSPENDED' && (
+                                  <button onClick={() => handleAction('REACTIVATE', member)} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-green-400/10 rounded-xl flex items-center transition-colors">
+                                    <UserCheck className="w-4 h-4 mr-3" /> Reactivate User
+                                  </button>
+                                )}
 
-                            {currentUserRole === 'super_admin' && member.role === 'member' && member.status === 'ACTIVE' && (
-                              <button onClick={() => handleAction('PROMOTE', member)} className="w-full text-left px-4 py-2.5 text-sm text-blue-400 hover:bg-blue-400/10 rounded-xl flex items-center transition-colors">
-                                <Shield className="w-4 h-4 mr-3" /> Grant Admin Rights
-                              </button>
-                            )}
+                                {currentUserRole === 'super_admin' && member.role === 'member' && member.status === 'ACTIVE' && (
+                                  <button onClick={() => handleAction('PROMOTE', member)} className="w-full text-left px-4 py-2.5 text-sm text-blue-400 hover:bg-blue-400/10 rounded-xl flex items-center transition-colors">
+                                    <Shield className="w-4 h-4 mr-3" /> Grant Admin Rights
+                                  </button>
+                                )}
 
-                            {member.role !== 'super_admin' && (
-                              <button onClick={() => handleAction('DELETE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
-                                <Trash2 className="w-4 h-4 mr-3" /> Permanently Delete
-                              </button>
+                                {member.role !== 'super_admin' && (
+                                  <button onClick={() => handleAction('SOFT_DELETE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
+                                    <Trash2 className="w-4 h-4 mr-3" /> Delete Account
+                                  </button>
+                                )}
+                              </>
                             )}
                           </>
                         )}
@@ -758,17 +794,21 @@ const Members: React.FC = () => {
               </div>
               
               <h2 className="text-xl font-bold mb-2 text-white">
-                {showConfirmModal.type === 'DELETE' ? 'Permanently Delete User' :
+                {showConfirmModal.type === 'DELETE' ? 'Permanently Purge User' :
+                 showConfirmModal.type === 'SOFT_DELETE' ? 'Move to Delete Waiting' :
                  showConfirmModal.type === 'SUSPEND' ? 'Suspend User Access' :
                  showConfirmModal.type === 'PROMOTE' ? 'Grant Admin Privileges' :
                  showConfirmModal.type === 'APPROVE' ? 'Approve Member Access' :
                  showConfirmModal.type === 'RESET_PASSWORD' ? 'Force Password Reset' :
+                 showConfirmModal.type === 'REACTIVATE' ? 'Restore Member' :
                  'Reactivate User'}
               </h2>
               
               <p className="text-secondary text-sm mb-8 leading-relaxed">
                 {showConfirmModal.type === 'DELETE' 
-                  ? `Are you absolutely sure you want to permanently delete ${showConfirmModal.member.name}? This action cannot be undone.` 
+                  ? `Are you absolutely sure you want to permanently purge ${showConfirmModal.member.name} from the database? This action is completely irreversible.` 
+                  : showConfirmModal.type === 'SOFT_DELETE'
+                  ? `You are about to move ${showConfirmModal.member.name} to the Delete Waiting queue. They will immediately lose access, but their profile details will be preserved for recovery.`
                   : showConfirmModal.type === 'SUSPEND'
                   ? `You are about to suspend ${showConfirmModal.member.name}. They will immediately lose access.`
                   : showConfirmModal.type === 'PROMOTE'
@@ -777,7 +817,7 @@ const Members: React.FC = () => {
                   ? `Approving ${showConfirmModal.member.name} will generate their Tribe Number and mint their identity onto the blockchain.`
                   : showConfirmModal.type === 'RESET_PASSWORD'
                   ? `You are about to send a password reset link to ${showConfirmModal.member.email}. The user will be required to change their password on next login.`
-                  : `You are about to reactivate ${showConfirmModal.member.name}. Their ID card will become valid for entry again.`
+                  : `You are about to restore and reactivate ${showConfirmModal.member.name}. Their account will be valid for entry again.`
                 }
               </p>
 
@@ -792,6 +832,7 @@ const Members: React.FC = () => {
                   onClick={confirmAction}
                   className={`flex-1 px-4 py-3 rounded-xl font-bold transition-all text-sm shadow-lg ${
                     showConfirmModal.type === 'DELETE' ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20' :
+                    showConfirmModal.type === 'SOFT_DELETE' ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20' :
                     showConfirmModal.type === 'SUSPEND' ? 'bg-yellow-500 hover:bg-yellow-600 text-black shadow-yellow-500/20' :
                     showConfirmModal.type === 'PROMOTE' ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-blue-500/20' :
                     showConfirmModal.type === 'RESET_PASSWORD' ? 'bg-white hover:bg-gray-200 text-black shadow-white/20' :

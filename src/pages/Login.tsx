@@ -37,6 +37,13 @@ const Login: React.FC<LoginProps> = ({ isAdminLogin = false }) => {
         
       if (profileError) throw profileError;
       
+      if (profile.status === 'DELETED') {
+        await supabase.auth.signOut();
+        setError('Your account has been deactivated. Please contact an administrator to restore access.');
+        setLoading(false);
+        return;
+      }
+      
       if (isAdminLogin) {
         if (profile.role === 'member') {
           await supabase.auth.signOut();
