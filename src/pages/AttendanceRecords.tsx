@@ -180,8 +180,8 @@ const AttendanceRecords: React.FC = () => {
         </div>
       </div>
 
-      {/* Session Data Table */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-[2rem] overflow-hidden">
+      {/* Desktop view */}
+      <div className="hidden md:block bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-[2rem] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-black/40 border-b border-white/10 text-[10px] uppercase tracking-widest text-[#B3B3B3]">
@@ -245,6 +245,62 @@ const AttendanceRecords: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Mobile Card list view */}
+      <div className="block md:hidden space-y-4">
+        {!loading && filteredSessions.map((session) => (
+          <div key={session.id} className="bg-white/5 border border-white/10 p-5 rounded-[2rem] flex flex-col space-y-4 relative shadow-xl">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full bg-black/50 border border-white/10 flex items-center justify-center text-sm font-bold shrink-0 shadow-inner">
+                {session.name.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="font-bold text-white block text-sm truncate">{session.name}</span>
+                <span className="text-[10px] text-secondary font-mono block truncate">{session.phone}</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5 text-xs">
+              <div>
+                <span className="text-secondary block text-[10px] uppercase tracking-wider mb-1">ID Number</span>
+                <span className="font-mono text-white bg-black px-2 py-1 rounded border border-white/5 inline-block">
+                  {session.memberCode}
+                </span>
+              </div>
+              <div>
+                <span className="text-secondary block text-[10px] uppercase tracking-wider mb-1">Time In</span>
+                <div className="flex items-center text-white">
+                  <Clock className="w-3.5 h-3.5 mr-1 text-secondary" />
+                  <span className="font-mono">{session.checkIn}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between pt-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-secondary uppercase tracking-wider border border-white/10">
+                {session.method}
+              </span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-500/10 text-green-500 uppercase tracking-wider border border-green-500/20">
+                Present
+              </span>
+            </div>
+          </div>
+        ))}
+
+        {loading && (
+          <div className="p-8 text-center text-secondary bg-[#111] border border-white/5 rounded-2xl flex flex-col items-center">
+            <Loader2 className="w-8 h-8 mb-3 opacity-40 animate-spin" />
+            <p>Loading attendance records...</p>
+          </div>
+        )}
+
+        {!loading && filteredSessions.length === 0 && (
+          <div className="p-8 text-center text-secondary bg-[#111] border border-white/5 rounded-2xl flex flex-col items-center">
+            <CalendarIcon className="w-10 h-10 mb-3 opacity-20" />
+            <p>No sessions found for this date.</p>
+          </div>
+        )}
       </div>
     </div>
   );

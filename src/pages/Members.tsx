@@ -190,7 +190,8 @@ const Members: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-[#111] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+      {/* Desktop view */}
+      <div className="hidden md:block bg-[#111] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
         <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-left text-sm">
             <thead className="bg-black/40 text-[10px] uppercase tracking-widest text-[#B3B3B3] border-b border-white/10">
@@ -327,6 +328,139 @@ const Members: React.FC = () => {
              </div>
           )}
         </div>
+      </div>
+
+      {/* Mobile view */}
+      <div className="block md:hidden space-y-4">
+        {filteredMembers.map((member) => (
+          <div key={member.id} className="bg-[#111] border border-white/10 p-5 rounded-[2rem] flex flex-col space-y-4 relative shadow-xl">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center space-x-3">
+                <div className={`h-11 w-11 rounded-xl border flex items-center justify-center text-white font-bold shadow-inner ${
+                  member.status === 'PENDING' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' : 'bg-black/50 border-white/10'
+                }`}>
+                  {member.name.charAt(0)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="font-bold text-white block text-sm truncate">{member.name}</span>
+                  <span className="text-[10px] text-secondary uppercase tracking-widest block truncate">{member.email}</span>
+                </div>
+              </div>
+              
+              {/* Dropdown container */}
+              <div className="relative">
+                <button 
+                  onClick={() => setActiveDropdown(activeDropdown === member.id ? null : member.id)}
+                  className="text-secondary hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors focus:outline-none"
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </button>
+
+                <AnimatePresence>
+                  {activeDropdown === member.id && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      className="absolute right-0 top-10 w-56 bg-[#1A1A1A] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 text-left backdrop-blur-2xl"
+                    >
+                      <div className="p-2 space-y-1">
+                        <button onClick={() => { setViewProfileModal(member); setActiveDropdown(null); }} className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-white/10 rounded-xl flex items-center transition-colors">
+                          <Eye className="w-4 h-4 mr-3 text-secondary" /> View Secure Profile
+                        </button>
+                        
+                        {member.status === 'PENDING' && (
+                           <button onClick={() => handleAction('APPROVE', member)} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-green-400/10 rounded-xl flex items-center transition-colors">
+                             <CheckCircle className="w-4 h-4 mr-3" /> Approve Access
+                           </button>
+                        )}
+
+                        {/* Standard admins cannot modify other admins/super_admins */}
+                        {(currentUserRole === 'super_admin' || (member.role !== 'admin' && member.role !== 'super_admin')) && (
+                          <>
+                            <div className="h-px bg-white/10 my-1 w-full" />
+                            
+                            {member.status === 'ACTIVE' && member.role !== 'super_admin' && (
+                              <button onClick={() => handleAction('SUSPEND', member)} className="w-full text-left px-4 py-2.5 text-sm text-yellow-400 hover:bg-yellow-400/10 rounded-xl flex items-center transition-colors">
+                                <ShieldAlert className="w-4 h-4 mr-3" /> Suspend User
+                              </button>
+                            )}
+
+                            {member.status !== 'PENDING' && (
+                              <button onClick={() => handleAction('RESET_PASSWORD', member)} className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-white/10 rounded-xl flex items-center transition-colors">
+                                <KeyRound className="w-4 h-4 mr-3 text-secondary" /> Reset Password
+                              </button>
+                            )}
+                            
+                            {member.status === 'SUSPENDED' && (
+                              <button onClick={() => handleAction('REACTIVATE', member)} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-green-400/10 rounded-xl flex items-center transition-colors">
+                                <UserCheck className="w-4 h-4 mr-3" /> Reactivate User
+                              </button>
+                            )}
+
+                            {currentUserRole === 'super_admin' && member.role === 'member' && member.status === 'ACTIVE' && (
+                              <button onClick={() => handleAction('PROMOTE', member)} className="w-full text-left px-4 py-2.5 text-sm text-blue-400 hover:bg-blue-400/10 rounded-xl flex items-center transition-colors">
+                                <Shield className="w-4 h-4 mr-3" /> Grant Admin Rights
+                              </button>
+                            )}
+
+                            {member.role !== 'super_admin' && (
+                              <button onClick={() => handleAction('DELETE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
+                                <Trash2 className="w-4 h-4 mr-3" /> Permanently Delete
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5 text-xs">
+              <div>
+                <span className="text-secondary block text-[10px] uppercase tracking-wider mb-1">Tribe Number</span>
+                {member.tribeNumber ? (
+                  <span className="font-mono text-white bg-black px-2 py-1 rounded border border-white/5 inline-block">
+                    {member.tribeNumber}
+                  </span>
+                ) : (
+                  <span className="text-secondary italic">Awaiting Generation</span>
+                )}
+              </div>
+              <div>
+                <span className="text-secondary block text-[10px] uppercase tracking-wider mb-1">Role</span>
+                {member.role === 'super_admin' ? (
+                   <span className="text-purple-400 font-bold flex items-center"><Shield className="w-3 h-3 mr-1"/> Super Admin</span>
+                ) : member.role === 'admin' ? (
+                   <span className="text-blue-400 font-bold flex items-center"><Shield className="w-3 h-3 mr-1"/> Admin</span>
+                ) : (
+                   <span className="text-secondary font-medium">Member</span>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between pt-2">
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                member.status === 'ACTIVE' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+                member.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' :
+                'bg-red-500/10 text-red-500 border-red-500/20'
+              }`}>
+                {member.status === 'ACTIVE' ? <UserCheck className="w-3 h-3 mr-1" /> : 
+                 member.status === 'PENDING' ? <History className="w-3 h-3 mr-1" /> :
+                 <UserX className="w-3 h-3 mr-1" />}
+                {member.status}
+              </span>
+            </div>
+          </div>
+        ))}
+
+        {filteredMembers.length === 0 && (
+           <div className="p-8 text-center text-secondary bg-[#111] border border-white/5 rounded-2xl">
+             No users found matching your filters.
+           </div>
+        )}
       </div>
 
       {/* Secure Profile Modal */}
