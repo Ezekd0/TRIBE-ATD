@@ -61,7 +61,7 @@ const Members: React.FC = () => {
   }, []);
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [showConfirmModal, setShowConfirmModal] = useState<{ type: 'APPROVE' | 'SUSPEND' | 'REACTIVATE' | 'DELETE' | 'PROMOTE' | 'RESET_PASSWORD' | 'SOFT_DELETE', member: Member } | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState<{ type: 'APPROVE' | 'SUSPEND' | 'REACTIVATE' | 'DELETE' | 'PROMOTE' | 'RESET_PASSWORD' | 'SOFT_DELETE' | 'DEMOTE', member: Member } | null>(null);
   const [viewProfileModal, setViewProfileModal] = useState<Member | null>(null);
   const [showReportDropdown, setShowReportDropdown] = useState(false);
 
@@ -134,7 +134,7 @@ const Members: React.FC = () => {
     return matchesSearch && member.status === filterTab;
   });
 
-  const handleAction = (type: 'APPROVE' | 'SUSPEND' | 'REACTIVATE' | 'DELETE' | 'PROMOTE' | 'RESET_PASSWORD' | 'SOFT_DELETE', member: Member) => {
+  const handleAction = (type: 'APPROVE' | 'SUSPEND' | 'REACTIVATE' | 'DELETE' | 'PROMOTE' | 'RESET_PASSWORD' | 'SOFT_DELETE' | 'DEMOTE', member: Member) => {
     setShowConfirmModal({ type, member });
     setActiveDropdown(null);
   };
@@ -159,6 +159,7 @@ const Members: React.FC = () => {
         if (type === 'REACTIVATE') newStatus = 'ACTIVE';
         if (type === 'SOFT_DELETE') newStatus = 'DELETED';
         if (type === 'PROMOTE') newRole = 'admin';
+        if (type === 'DEMOTE') newRole = 'member';
 
         await supabase.from('users').update({ status: newStatus, role: newRole }).eq('id', member.id);
         fetchUsers();
@@ -392,6 +393,12 @@ const Members: React.FC = () => {
                                       </button>
                                     )}
 
+                                    {currentUserRole === 'super_admin' && member.role === 'admin' && (
+                                      <button onClick={() => handleAction('DEMOTE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
+                                        <UserX className="w-4 h-4 mr-3" /> Revoke Admin Rights
+                                      </button>
+                                    )}
+
                                     {member.role !== 'super_admin' && (
                                       <button onClick={() => handleAction('SOFT_DELETE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
                                         <Trash2 className="w-4 h-4 mr-3" /> Delete Account
@@ -507,6 +514,12 @@ const Members: React.FC = () => {
                                 {currentUserRole === 'super_admin' && member.role === 'member' && member.status === 'ACTIVE' && (
                                   <button onClick={() => handleAction('PROMOTE', member)} className="w-full text-left px-4 py-2.5 text-sm text-blue-400 hover:bg-blue-400/10 rounded-xl flex items-center transition-colors">
                                     <Shield className="w-4 h-4 mr-3" /> Grant Admin Rights
+                                  </button>
+                                )}
+
+                                {currentUserRole === 'super_admin' && member.role === 'admin' && (
+                                  <button onClick={() => handleAction('DEMOTE', member)} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl flex items-center transition-colors">
+                                    <UserX className="w-4 h-4 mr-3" /> Revoke Admin Rights
                                   </button>
                                 )}
 
@@ -693,17 +706,17 @@ const Members: React.FC = () => {
                       className="w-full bg-black border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1.5 text-white/60">Tribe ID (Code)</label>
-                    <input
-                      type="text"
-                      name="tribeNumber"
-                      placeholder="e.g. IBX001"
-                      value={editFormData.tribeNumber || ''}
-                      onChange={handleEditChange}
-                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
-                    />
-                  </div>
+                   <div>
+                     <label className="block text-xs font-bold mb-1.5 text-white/60">Tribe ID (Auto-generated)</label>
+                     <input
+                       type="text"
+                       name="tribeNumber"
+                       placeholder="Auto-generated on approval"
+                       value={editFormData.tribeNumber || ''}
+                       onChange={handleEditChange}
+                       className="w-full bg-black border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
+                     />
+                   </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
@@ -812,6 +825,7 @@ const Members: React.FC = () => {
                  showConfirmModal.type === 'SOFT_DELETE' ? 'Move to Delete Waiting' :
                  showConfirmModal.type === 'SUSPEND' ? 'Suspend User Access' :
                  showConfirmModal.type === 'PROMOTE' ? 'Grant Admin Privileges' :
+                 showConfirmModal.type === 'DEMOTE' ? 'Revoke Admin Privileges' :
                  showConfirmModal.type === 'APPROVE' ? 'Approve Member Access' :
                  showConfirmModal.type === 'RESET_PASSWORD' ? 'Force Password Reset' :
                  showConfirmModal.type === 'REACTIVATE' ? 'Restore Member' :
@@ -827,6 +841,8 @@ const Members: React.FC = () => {
                   ? `You are about to suspend ${showConfirmModal.member.name}. They will immediately lose access.`
                   : showConfirmModal.type === 'PROMOTE'
                   ? `You are about to elevate ${showConfirmModal.member.name} to Admin status. They will have full access to this dashboard.`
+                  : showConfirmModal.type === 'DEMOTE'
+                  ? `You are about to demote ${showConfirmModal.member.name} back to Member status. They will immediately lose administrator dashboard access.`
                   : showConfirmModal.type === 'APPROVE'
                   ? `Approving ${showConfirmModal.member.name} will generate their Tribe Number and mint their identity onto the blockchain.`
                   : showConfirmModal.type === 'RESET_PASSWORD'
@@ -849,6 +865,7 @@ const Members: React.FC = () => {
                     showConfirmModal.type === 'SOFT_DELETE' ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20' :
                     showConfirmModal.type === 'SUSPEND' ? 'bg-yellow-500 hover:bg-yellow-600 text-black shadow-yellow-500/20' :
                     showConfirmModal.type === 'PROMOTE' ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-blue-500/20' :
+                    showConfirmModal.type === 'DEMOTE' ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20' :
                     showConfirmModal.type === 'RESET_PASSWORD' ? 'bg-white hover:bg-gray-200 text-black shadow-white/20' :
                     'bg-green-500 hover:bg-green-600 text-white shadow-green-500/20'
                   }`}
