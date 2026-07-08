@@ -50,7 +50,17 @@ const Register: React.FC = () => {
       if (authError) throw authError;
       setIsSubmitted(true);
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+      console.error('Full registration error:', err);
+      let errorMsg = 'Registration failed. Please try again.';
+      if (err instanceof Error) {
+        errorMsg = err.message;
+      } else if (err && typeof err === 'object') {
+        errorMsg = err.message || JSON.stringify(err);
+        if (errorMsg === '{}') errorMsg = 'Database trigger failed. Did you run the SQL migration?';
+      } else if (typeof err === 'string') {
+        errorMsg = err;
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
