@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, MoreVertical, ShieldAlert, UserX, UserCheck, Trash2, Eye, History, Shield, CheckCircle, Download, KeyRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
-import { api } from '../services/api';
+import { supabase } from '../services/supabase';
 
 type MemberStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED';
 
@@ -30,8 +30,9 @@ const Members: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const data = await api.get('/admin/users');
-      // Format backend users to frontend members model if needed
+      const { data, error } = await supabase.from('users').select('*');
+      if (error) throw error;
+      
       const formatted = data.map((u: any) => ({
         id: u.id,
         name: u.full_name,
@@ -39,7 +40,7 @@ const Members: React.FC = () => {
         joinDate: u.created_at,
         status: u.status,
         tribeNumber: u.tribe_number,
-        blockchainHash: u.blockchain_hash,
+        blockchainHash: u.on_chain_tx_hash,
         address: u.address,
         emergencyName: u.emergency_contact_name,
         emergencyPhone: u.emergency_contact_phone,
@@ -80,9 +81,11 @@ const Members: React.FC = () => {
 
     try {
       if (type === 'DELETE') {
-        await api.delete(`/admin/users/${member.id}`);
+        // Without an Edge Function, we mark the user as deleted in the public schema
+        await supabase.from('users').update({ status: 'DELETED' }).eq('id', member.id);
         setMembers(members.filter(m => m.id !== member.id));
       } else if (type === 'RESET_PASSWORD') {
+        await supabase.auth.resetPasswordForEmail(member.email);
         alert(`Password reset link sent to ${member.email}`);
       } else {
         let newStatus = member.status;
@@ -92,8 +95,7 @@ const Members: React.FC = () => {
         if (type === 'REACTIVATE') newStatus = 'ACTIVE';
         if (type === 'PROMOTE') newRole = 'admin';
 
-        await api.put(`/admin/users/${member.id}`, { status: newStatus, role: newRole });
-        // Instead of doing complex frontend transforms, just refetch
+        await supabase.from('users').update({ status: newStatus, role: newRole }).eq('id', member.id);
         fetchUsers();
       }
     } catch (err) {

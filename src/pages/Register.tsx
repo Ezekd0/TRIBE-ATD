@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Fingerprint, CheckCircle2 } from 'lucide-react';
-import { api } from '../services/api';
+import { supabase } from '../services/supabase';
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -33,7 +33,21 @@ const Register: React.FC = () => {
     setError(null);
     
     try {
-      await api.post('/auth/register', formData);
+      const { error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+            phone_number: formData.phone,
+            gender: formData.gender,
+            address: formData.address,
+            emergency_contact_name: formData.emergencyName,
+            emergency_contact_phone: formData.emergencyPhone,
+          }
+        }
+      });
+      if (authError) throw authError;
       setIsSubmitted(true);
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.');

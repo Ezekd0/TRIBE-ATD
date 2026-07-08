@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { api } from '../services/api';
+import { supabase } from '../services/supabase';
 import { Fingerprint, AlertCircle } from 'lucide-react';
 
 interface LoginProps {
@@ -10,7 +9,6 @@ interface LoginProps {
 
 const Login: React.FC<LoginProps> = ({ isAdminLogin = false }) => {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,19 +21,32 @@ const Login: React.FC<LoginProps> = ({ isAdminLogin = false }) => {
     setError(null);
     
     try {
-      const { token, user } = await api.post('/auth/login', { email, password });
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (authError) throw authError;
+
+      // Fetch profile to check role for routing
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+        
+      if (profileError) throw profileError;
       
       if (isAdminLogin) {
-        if (user.role === 'member') {
+        if (profile.role === 'member') {
+          await supabase.auth.signOut();
           setError('Unauthorized: You do not have administrator privileges.');
           setLoading(false);
           return;
         }
-        signIn(token, user);
         navigate('/admin');
       } else {
-        signIn(token, user);
-        if (user.role === 'admin' || user.role === 'super_admin') {
+        if (profile.role === 'admin' || profile.role === 'super_admin') {
           navigate('/admin');
         } else {
           navigate('/member');
